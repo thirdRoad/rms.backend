@@ -32,6 +32,7 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       FLASK_CONFIG: ${FLASK_CONFIG:-development}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       FLASK_APP: app.py
       FLASK_DEBUG: 1
     volumes:
