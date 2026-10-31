@@ -1,10 +1,9 @@
-from datetime import datetime, timezone
-
 from flask import abort
 from flask_jwt_extended import create_access_token, get_jwt
 from werkzeug.security import check_password_hash
 
 from flaskr.core.extensions import db
+from flaskr.core.utils import utc_now
 from flaskr.domains.auth.models import TokenBlocklist
 from flaskr.domains.user.models import User
 from flaskr.domains.user.repositories import UserRepository
@@ -28,5 +27,5 @@ class AuthService:
 
     def logout(self) -> None:
         jti = get_jwt()["jti"]
-        db.session.add(TokenBlocklist(jti=jti, created_at=datetime.now(timezone.utc)))
+        db.session.add(TokenBlocklist(jti=jti, created_at=utc_now()))
         db.session.commit()

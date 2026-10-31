@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Dict
 
@@ -8,6 +8,7 @@ from sqlalchemy import Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from flaskr.core.base.model import BaseModel
+from flaskr.core.utils import to_iso, utc_now
 
 if TYPE_CHECKING:
     from flaskr.domains.orders.models import Order
@@ -27,9 +28,11 @@ class Table(BaseModel):
         SQLEnum(TableStatus), default=TableStatus.AVAILABLE
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=utc_now
     )
-    last_updated: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_updated: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     orders: Mapped[list["Order"]] = relationship(back_populates="table")
 
@@ -40,8 +43,6 @@ class Table(BaseModel):
             "status": (
                 self.status.value if hasattr(self.status, "value") else self.status
             ),
-            "created_at": self.created_at.isoformat(),
-            "last_updated": (
-                self.last_updated.isoformat() if self.last_updated else None
-            ),
+            "created_at": to_iso(self.created_at),
+            "last_updated": (to_iso(self.last_updated)),
         }

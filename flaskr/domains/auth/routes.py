@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from typing import Any, Dict
 
 from flask import Response, jsonify, request
@@ -6,6 +5,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from flaskr.core.base.routes import BaseRoutes
 from flaskr.core.decorators import role_required
+from flaskr.core.utils import to_iso, utc_now
 from flaskr.domains.auth.services import AuthService
 from flaskr.domains.auth.validators import AuthLoginValidator
 from flaskr.domains.user.services import UserService
@@ -23,7 +23,7 @@ class BaseAuthAPI(BaseRoutes):
             "refresh_token": data["refresh_token"],
         }
         response = {
-            "server_time": datetime.now(timezone.utc).isoformat(),
+            "server_time": to_iso(utc_now()),
             "data": final_data,
         }
         return jsonify(response)
@@ -31,7 +31,7 @@ class BaseAuthAPI(BaseRoutes):
     @staticmethod
     def format_logout_response(data: Dict[str, Any]) -> Response:
         response = {
-            "server_time": datetime.now(timezone.utc).isoformat(),
+            "server_time": to_iso(utc_now()),
             "data": data,
         }
         return jsonify(response)

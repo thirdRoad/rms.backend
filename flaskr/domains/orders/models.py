@@ -1,10 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING, Dict
 
 from sqlalchemy import DateTime, Integer
 from sqlalchemy.orm import Mapped, relationship
 
 from flaskr.core.base.model import BaseModel, mapped_column, mapped_foreign_key
+from flaskr.core.utils import to_iso, utc_now
 
 if TYPE_CHECKING:
     from flaskr.domains.orderDetails.models import OrderDetail
@@ -17,7 +18,7 @@ class Order(BaseModel):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=utc_now
     )
 
     user_id: Mapped[int] = mapped_foreign_key("users.id")
@@ -33,5 +34,5 @@ class Order(BaseModel):
     def serialize(self) -> Dict:
         return {
             "id": self.id,
-            "created_at": self.created_at.isoformat(),
+            "created_at": to_iso(self.created_at),
         }

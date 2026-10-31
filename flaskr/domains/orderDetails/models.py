@@ -1,10 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING, Dict
 
 from sqlalchemy import DateTime, Float, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from flaskr.core.base.model import BaseModel
+from flaskr.core.utils import to_iso, utc_now
 
 if TYPE_CHECKING:
     from flaskr.domains.orders.models import Order
@@ -25,7 +26,7 @@ class OrderDetail(BaseModel):
     unit_price: Mapped[float] = mapped_column(Float, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=utc_now
     )
 
     order: Mapped["Order"] = relationship("Order", back_populates="order_details")
@@ -39,5 +40,5 @@ class OrderDetail(BaseModel):
             "product_name": self.product.name if self.product else None,
             "quantity": self.quantity,
             "unit_price": self.unit_price,
-            "created_at": self.created_at.isoformat(),
+            "created_at": to_iso(self.created_at),
         }

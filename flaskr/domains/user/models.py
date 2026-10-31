@@ -1,10 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING, Dict
 
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from flaskr.core.base.model import BaseModel, mapped_foreign_key
+from flaskr.core.utils import to_iso, utc_now
 
 if TYPE_CHECKING:
     from flaskr.domains.orders.models import Order
@@ -20,7 +21,7 @@ class User(BaseModel):
     display_name: Mapped[str] = mapped_column(String(16), unique=True)
     email: Mapped[str] = mapped_column(String(64), unique=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=utc_now
     )
 
     role_id: Mapped[int] = mapped_foreign_key("roles.id")
@@ -35,5 +36,5 @@ class User(BaseModel):
             "username": self.username,
             "display_name": self.display_name,
             "email": self.email,
-            "created_at": self.created_at.isoformat(),
+            "created_at": to_iso(self.created_at),
         }
