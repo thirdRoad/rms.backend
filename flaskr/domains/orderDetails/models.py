@@ -36,6 +36,7 @@ class OrderDetail(BaseModel):
         return {
             "order_id": self.order_id,
             "product_id": self.product_id,
+            "product_name": self.product.name if self.product else None,
             "quantity": self.quantity,
             "unit_price": self.unit_price,
             "created_at": self.created_at.isoformat(),

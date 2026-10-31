@@ -47,6 +47,7 @@ class Config:
 class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_ECHO = True
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=60)
 
 
 class TestingConfig(Config):
