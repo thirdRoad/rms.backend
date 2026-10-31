@@ -3,12 +3,12 @@ from typing import List
 from flask import abort
 from sqlalchemy import delete, select
 
-from flaskr.core.base.repository import BaseRepository
+from flaskr.core.base.repositories import BaseRepository
 from flaskr.core.extensions import db
-from flaskr.domains.orderDetails.models import OrderDetail
+from flaskr.domains.order_detail.models import OrderDetail
 
 
-class OrderDetailsRepository(BaseRepository[OrderDetail]):
+class OrderDetailRepository(BaseRepository[OrderDetail]):
     model = OrderDetail
 
     def add_bulk(self, order_id: int, items_data: list):

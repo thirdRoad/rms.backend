@@ -2,8 +2,8 @@ from flask import request
 
 from flaskr.core.base.routes import BaseRoutes
 from flaskr.core.decorators import role_required
-from flaskr.domains.orders.services import OrderService
-from flaskr.domains.orders.validators import OrderCreateValidator, OrderUpdateValidator
+from flaskr.domains.order.services import OrderService
+from flaskr.domains.order.validators import OrderCreateValidator, OrderUpdateValidator
 
 from . import bp
 
@@ -27,7 +27,7 @@ class OrderItemsAPI(BaseRoutes):
     service = OrderService()
 
     @role_required("admin", "service_staff", "kitchen_staff")
-    def get(self, order_id: int):  # get orderDetails
+    def get(self, order_id: int):  # get order details
         response = self.service.get_by_order_id_orderdetails(order_id=order_id)
         return self.format_plural_response(data=response)
 

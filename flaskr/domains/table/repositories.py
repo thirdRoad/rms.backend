@@ -1,10 +1,10 @@
 from sqlalchemy.exc import SQLAlchemyError
 from typing_extensions import override
 
-from flaskr.core.base.repository import BaseRepository
+from flaskr.core.base.repositories import BaseRepository
 from flaskr.core.extensions import db
 from flaskr.core.utils import utc_now
-from flaskr.domains.tables.models import Table, TableStatus
+from flaskr.domains.table.models import Table, TableStatus
 
 
 class TableRepository(BaseRepository):

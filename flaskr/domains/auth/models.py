@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from flaskr.core.base.model import BaseModel
+from flaskr.core.base.models import BaseModel
 from flaskr.core.utils import utc_now
 
 

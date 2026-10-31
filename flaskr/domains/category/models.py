@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Dict, List
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from flaskr.core.base.model import BaseModel
+from flaskr.core.base.models import BaseModel
 from flaskr.core.utils import to_iso, utc_now
 
 if TYPE_CHECKING:

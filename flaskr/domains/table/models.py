@@ -7,11 +7,11 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from flaskr.core.base.model import BaseModel
+from flaskr.core.base.models import BaseModel
 from flaskr.core.utils import to_iso, utc_now
 
 if TYPE_CHECKING:
-    from flaskr.domains.orders.models import Order
+    from flaskr.domains.order.models import Order
 
 
 class TableStatus(Enum):

@@ -2,8 +2,8 @@ from flask import request
 
 from flaskr.core.base.routes import BaseRoutes
 from flaskr.core.decorators import role_required
-from flaskr.domains.tables.services import TableService
-from flaskr.domains.tables.validators import TableUpdateValidator
+from flaskr.domains.table.services import TableService
+from flaskr.domains.table.validators import TableUpdateValidator
 
 from . import bp
 

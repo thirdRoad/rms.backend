@@ -3,18 +3,18 @@ from typing import Any, Dict, List
 from flask import abort
 
 from flaskr.core.base.services import BaseService
-from flaskr.domains.orderDetails.models import OrderDetail
-from flaskr.domains.orderDetails.repository import OrderDetailsRepository
-from flaskr.domains.orders.repository import OrderRepository
+from flaskr.domains.order.repositories import OrderRepository
+from flaskr.domains.order_detail.models import OrderDetail
+from flaskr.domains.order_detail.repositories import OrderDetailRepository
 from flaskr.domains.product.repositories import ProductRepository
-from flaskr.domains.tables.repositories import TableRepository
+from flaskr.domains.table.repositories import TableRepository
 from flaskr.domains.user.repositories import UserRepository
 
 
 class OrderService(BaseService):
     repository: OrderRepository
     repository = OrderRepository()
-    order_detail_repo = OrderDetailsRepository()
+    order_detail_repo = OrderDetailRepository()
     product_repo = ProductRepository()
     table_repo = TableRepository()
     user_repo = UserRepository()
@@ -63,7 +63,7 @@ class OrderService(BaseService):
         order = self.repository.add(data=data)
         return order.serialize
 
-    # update orderDetails products and quantity
+    # update order detail products and quantity
     def update_order_product(
         self, order_id: int, product_id: int, quantity: int
     ) -> Dict[str, Any]:

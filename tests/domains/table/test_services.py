@@ -1,8 +1,8 @@
 import pytest
 from werkzeug.exceptions import NotFound
 
-from flaskr.domains.tables.models import Table, TableStatus
-from flaskr.domains.tables.services import TableService
+from flaskr.domains.table.models import Table, TableStatus
+from flaskr.domains.table.services import TableService
 from tests.base import BaseTestCase
 
 

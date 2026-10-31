@@ -4,12 +4,12 @@ from typing import TYPE_CHECKING, Dict
 from sqlalchemy import DateTime, Integer
 from sqlalchemy.orm import Mapped, relationship
 
-from flaskr.core.base.model import BaseModel, mapped_column, mapped_foreign_key
+from flaskr.core.base.models import BaseModel, mapped_column, mapped_foreign_key
 from flaskr.core.utils import to_iso, utc_now
 
 if TYPE_CHECKING:
-    from flaskr.domains.orderDetails.models import OrderDetail
-    from flaskr.domains.tables.models import Table
+    from flaskr.domains.order_detail.models import OrderDetail
+    from flaskr.domains.table.models import Table
     from flaskr.domains.user.models import User
 
 

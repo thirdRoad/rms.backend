@@ -88,6 +88,24 @@ class TestProductService(BaseTestCase):
 
             assert exc_info.value.code == 409
             assert "already exists" in exc_info.value.description
+            assert "in category 'Drinks'" in exc_info.value.description
+
+    def test_create_product_with_nonexistent_category_raises_404(self):
+        product_data = {
+            "name": "Tost",
+            "price": 10.0,
+            "stock": 0,
+            "category_id": 999,
+        }
+
+        with self.app.test_request_context():
+            with pytest.raises(NotFound) as exc_info:
+                self.domain.create_new_product(data=product_data)
+
+            assert exc_info.value.description == "Category not found"
+
+        saved = self.db.session.query(Product).filter_by(name="Tost").one_or_none()
+        assert saved is None
 
     def test_get_by_id_returns_product(self):
         product_id = self.seed_product(

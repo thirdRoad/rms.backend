@@ -3,7 +3,7 @@ from typing import Any, Dict
 from marshmallow import fields, validate
 
 from flaskr.core.base.validators import BaseValidator
-from flaskr.domains.tables.models import TableStatus
+from flaskr.domains.table.models import TableStatus
 
 
 class TableUpdateValidator(BaseValidator):

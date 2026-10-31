@@ -2,12 +2,12 @@ from werkzeug.security import generate_password_hash
 
 from flaskr.core.extensions import db
 from flaskr.domains.category.models import Category
-from flaskr.domains.orderDetails.models import OrderDetail
-from flaskr.domains.orders.models import Order
-from flaskr.domains.orders.services import OrderService
+from flaskr.domains.order.models import Order
+from flaskr.domains.order.services import OrderService
+from flaskr.domains.order_detail.models import OrderDetail
 from flaskr.domains.product.models import Product
 from flaskr.domains.role.models import Role
-from flaskr.domains.tables.models import Table
+from flaskr.domains.table.models import Table
 from flaskr.domains.user.models import User
 from tests.base import BaseTestCase
 

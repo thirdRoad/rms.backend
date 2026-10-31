@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Dict, List
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from flaskr.core.base.model import BaseModel
+from flaskr.core.base.models import BaseModel
 
 if TYPE_CHECKING:
     from flaskr.domains.user.models import User

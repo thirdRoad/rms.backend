@@ -2,18 +2,18 @@ from typing import Any, Dict
 
 from typing_extensions import override
 
-from flaskr.core.base.repository import BaseRepository
+from flaskr.core.base.repositories import BaseRepository
 from flaskr.core.extensions import db
-from flaskr.domains.orderDetails.models import OrderDetail
-from flaskr.domains.orderDetails.repository import OrderDetailsRepository
-from flaskr.domains.orders.models import Order
+from flaskr.domains.order.models import Order
+from flaskr.domains.order_detail.models import OrderDetail
+from flaskr.domains.order_detail.repositories import OrderDetailRepository
 from flaskr.domains.product.repositories import ProductRepository
 
 
 class OrderRepository(BaseRepository[Order]):
     model = Order
     product_repo = ProductRepository()
-    order_detail_repo = OrderDetailsRepository()
+    order_detail_repo = OrderDetailRepository()
 
     @override
     def add(self, data: Dict[str, Any]) -> Order:
@@ -54,7 +54,7 @@ class OrderRepository(BaseRepository[Order]):
             db.session.rollback()
             raise e
 
-        # update orderDetails products and quantity
+        # update order detail products and quantity
 
     def update_order_product(
         self, order_id: int, product_id: int, quantity: int

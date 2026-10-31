@@ -122,6 +122,22 @@ class TestProductAPI(BaseTestCase):
 
         assert res.status_code == 409
         assert "already exists" in res.json["message"]
+        assert "in category 'Burgers'" in res.json["message"]
+
+    def test_create_product_with_nonexistent_category_returns_404(self):
+        res = self.client.post(
+            "/products/",
+            json={
+                "name": "Tost",
+                "price": 10.0,
+                "stock": 0,
+                "category_id": 999,
+            },
+            headers=self.get_auth_headers(),
+        )
+
+        assert res.status_code == 404
+        assert res.json["message"] == "Category not found"
 
     def test_create_product_missing_required_fields_returns_400(self):
         res = self.client.post(
@@ -264,6 +280,18 @@ class TestProductAPI(BaseTestCase):
         )
 
         assert res.status_code == 404
+
+    def test_update_product_with_nonexistent_category_returns_404(self):
+        product_id = self.create_product(name="Pizza", price=10.0, stock=5)
+
+        res = self.client.patch(
+            f"/products/{product_id}",
+            json={"category_id": 999},
+            headers=self.get_auth_headers(),
+        )
+
+        assert res.status_code == 404
+        assert res.json["message"] == "Category not found"
 
     def test_update_product_as_kitchen_staff_returns_403(self):
         product_id = self.create_product(name="Ice Cream")
