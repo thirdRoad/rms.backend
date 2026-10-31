@@ -280,6 +280,26 @@ class TestProductAPI(BaseTestCase):
 
         assert res.status_code == 404
 
+    def test_update_product_name_to_existing_name_returns_409(self):
+        self.create_product(name="Pizza")
+        product_id = self.create_product(name="Burger")
+
+        res = self.client.patch(
+            f"/products/{product_id}",
+            json={"name": "Pizza"},
+            headers=self.get_auth_headers(),
+        )
+
+        assert res.status_code == 409
+        assert res.json["error"] == "Conflict"
+
+        get_res = self.client.get(
+            f"/products/{product_id}",
+            headers=self.get_auth_headers(),
+        )
+        assert get_res.status_code == 200
+        assert get_res.json["data"]["name"] == "Burger"
+
     def test_update_product_with_nonexistent_category_returns_404(self):
         product_id = self.create_product(name="Pizza", price=10.0, stock=5)
 

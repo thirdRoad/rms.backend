@@ -212,6 +212,7 @@ class TestOrderAPI(BaseTestCase):
         assert res.status_code == 200
         assert res.json["data"]["id"] == order_id
         assert res.json["data"]["user"]["username"] == "testadmin"
+        assert res.json["data"]["user"]["created_at"].endswith("+00:00")
 
     def test_get_nonexistent_order_returns_404(self):
         res = self.client.get("/orders/999", headers=self.get_auth_headers())

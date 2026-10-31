@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 from flask import abort
 
 from flaskr.core.base.services import BaseService
+from flaskr.core.utils import to_iso
 from flaskr.domains.order.repositories import OrderRepository
 from flaskr.domains.order_item.repositories import OrderItemRepository
 from flaskr.domains.product.repositories import ProductRepository
@@ -29,7 +30,7 @@ class OrderService(BaseService):
             "id": order.user.id,
             "username": order.user.username,
             "email": order.user.email,
-            "created_at": order.user.created_at,
+            "created_at": to_iso(order.user.created_at),
             "display_name": order.user.display_name,
         }
         return response

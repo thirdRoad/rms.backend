@@ -17,7 +17,7 @@ class TableRepository(BaseRepository):
         entity.last_updated = utc_now()
         try:
             db.session.commit()
-            return True
-        except SQLAlchemyError as e:
-            print(e)
-            return False
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise
+        return True

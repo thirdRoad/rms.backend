@@ -31,10 +31,10 @@ class BaseRepository(Generic[T]):
 
         try:
             db.session.commit()
-            return True
-        except SQLAlchemyError as e:
-            print(e)
-            return False
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise
+        return True
 
     def add(self, entity: T) -> T:
         db.session.add(entity)
