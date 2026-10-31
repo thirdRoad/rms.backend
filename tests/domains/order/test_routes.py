@@ -2,7 +2,7 @@ from werkzeug.security import generate_password_hash
 
 from flaskr.core.extensions import db
 from flaskr.domains.category.models import Category
-from flaskr.domains.order.models import Order
+from flaskr.domains.order.models import Order, OrderStatus
 from flaskr.domains.order.services import OrderService
 from flaskr.domains.order_item.models import OrderItem
 from flaskr.domains.product.models import Product
@@ -450,6 +450,84 @@ class TestOrderAPI(BaseTestCase):
             "/orders/999",
             headers=self.get_auth_headers(),
         )
+
+        assert res.status_code == 404
+        assert res.json["message"] == "Order not found"
+
+    def post_status(self, order_id: int, status: str, user: str = "testadmin"):
+        passwords = {
+            "testadmin": "adminpass",
+            "teststaff": "staffpass",
+            "testkitchen": "kitchenpass",
+        }
+        return self.client.post(
+            f"/orders/{order_id}/{status}",
+            headers=self.get_auth_headers(user, passwords[user]),
+        )
+
+    def test_kitchen_staff_can_mark_order_done(self):
+        order_id = self.create_order()["order_id"]
+
+        res = self.post_status(order_id, "done", user="testkitchen")
+
+        assert res.status_code == 200
+        assert res.json["data"]["status"] == "done"
+        assert self.db.session.get(Order, order_id).status == OrderStatus.DONE
+
+    def test_service_staff_can_cancel_order(self):
+        order_id = self.create_order()["order_id"]
+
+        res = self.post_status(order_id, "cancelled", user="teststaff")
+
+        assert res.status_code == 200
+        assert res.json["data"]["status"] == "cancelled"
+
+    def test_kitchen_staff_can_cancel_order(self):
+        order_id = self.create_order()["order_id"]
+
+        res = self.post_status(order_id, "cancelled", user="testkitchen")
+
+        assert res.status_code == 200
+        assert res.json["data"]["status"] == "cancelled"
+
+    def test_status_can_move_between_any_statuses(self):
+        order_id = self.create_order()["order_id"]
+
+        for status in ("done", "cancelled", "done", "preparation", "cancelled"):
+            res = self.post_status(order_id, status)
+
+            assert res.status_code == 200
+            assert res.json["data"]["status"] == status
+            assert self.db.session.get(Order, order_id).status == OrderStatus(status)
+
+    def test_setting_same_status_returns_409(self):
+        order_id = self.create_order()["order_id"]
+
+        res = self.post_status(order_id, "preparation")
+
+        assert res.status_code == 409
+        assert res.json["message"] == "Order is already preparation"
+
+    def test_unknown_status_url_returns_404(self):
+        order_id = self.create_order()["order_id"]
+
+        res = self.post_status(order_id, "eaten")
+
+        assert res.status_code == 404
+
+    def test_old_status_patch_url_is_removed(self):
+        order_id = self.create_order()["order_id"]
+
+        res = self.client.patch(
+            f"/orders/{order_id}/status",
+            json={"status": "done"},
+            headers=self.get_auth_headers(),
+        )
+
+        assert res.status_code == 404
+
+    def test_status_of_nonexistent_order_returns_404(self):
+        res = self.post_status(999, "done")
 
         assert res.status_code == 404
         assert res.json["message"] == "Order not found"

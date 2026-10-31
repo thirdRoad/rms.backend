@@ -4,6 +4,7 @@ from flask import abort
 
 from flaskr.core.base.services import BaseService
 from flaskr.core.utils import to_iso
+from flaskr.domains.order.models import OrderStatus
 from flaskr.domains.order.repositories import OrderRepository
 from flaskr.domains.order_item.repositories import OrderItemRepository
 from flaskr.domains.product.repositories import ProductRepository
@@ -18,6 +19,18 @@ class OrderService(BaseService):
     product_repo = ProductRepository()
     table_repo = TableRepository()
     user_repo = UserRepository()
+
+    def update_order_status(self, order_id: int, status: str) -> Dict[str, Any]:
+        order = self.repository.get_by_id(order_id)
+        if order is None:
+            abort(404, description="Order not found")
+
+        new_status = OrderStatus(status)
+        if order.status == new_status:
+            abort(409, description=f"Order is already {new_status.value}")
+
+        self.repository.update(item_id=order_id, data={"status": new_status})
+        return self.get_by_id(item_id=order_id)
 
     def get_by_id(self, item_id: int) -> Dict | None:
         order = self.repository.get_by_id(item_id=item_id)

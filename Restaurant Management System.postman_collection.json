@@ -8618,6 +8618,342 @@
               "body": "{\n    \"error\": \"Not Found\",\n    \"message\": \"Product not found: [999]\",\n    \"code\": 404\n}"
             }
           ]
+        },
+        {
+          "name": "Set Order Preparation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/:order_id/preparation",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                ":order_id",
+                "preparation"
+              ],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Sets the order status to 'preparation'. No body. Any status can move to any other; sending the current status returns 409. Admin, service staff and kitchen staff."
+          },
+          "response": [
+            {
+              "name": "Success - 200",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/orders/:order_id/preparation",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    ":order_id",
+                    "preparation"
+                  ],
+                  "variable": [
+                    {
+                      "key": "order_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"server_time\": \"2026-11-01T10:00:00+00:00\",\n    \"data\": {\n        \"id\": 1,\n        \"status\": \"preparation\",\n        \"created_at\": \"2026-11-01T10:00:00+00:00\",\n        \"user\": {\n            \"id\": 1,\n            \"username\": \"admin\",\n            \"email\": \"admin@example.com\",\n            \"created_at\": \"2026-11-01T10:00:00+00:00\",\n            \"display_name\": \"Admin\"\n        }\n    }\n}"
+            },
+            {
+              "name": "Conflict - 409",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/orders/:order_id/preparation",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    ":order_id",
+                    "preparation"
+                  ],
+                  "variable": [
+                    {
+                      "key": "order_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "CONFLICT",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"Conflict\",\n    \"message\": \"Order is already preparation\",\n    \"code\": 409\n}"
+            }
+          ]
+        },
+        {
+          "name": "Set Order Done",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/:order_id/done",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                ":order_id",
+                "done"
+              ],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Sets the order status to 'done'. No body. Any status can move to any other; sending the current status returns 409. Admin, service staff and kitchen staff."
+          },
+          "response": [
+            {
+              "name": "Success - 200",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/orders/:order_id/done",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    ":order_id",
+                    "done"
+                  ],
+                  "variable": [
+                    {
+                      "key": "order_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"server_time\": \"2026-11-01T10:00:00+00:00\",\n    \"data\": {\n        \"id\": 1,\n        \"status\": \"done\",\n        \"created_at\": \"2026-11-01T10:00:00+00:00\",\n        \"user\": {\n            \"id\": 1,\n            \"username\": \"admin\",\n            \"email\": \"admin@example.com\",\n            \"created_at\": \"2026-11-01T10:00:00+00:00\",\n            \"display_name\": \"Admin\"\n        }\n    }\n}"
+            },
+            {
+              "name": "Conflict - 409",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/orders/:order_id/done",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    ":order_id",
+                    "done"
+                  ],
+                  "variable": [
+                    {
+                      "key": "order_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "CONFLICT",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"Conflict\",\n    \"message\": \"Order is already done\",\n    \"code\": 409\n}"
+            }
+          ]
+        },
+        {
+          "name": "Set Order Cancelled",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/:order_id/cancelled",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "orders",
+                ":order_id",
+                "cancelled"
+              ],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Sets the order status to 'cancelled'. No body. Any status can move to any other; sending the current status returns 409. Admin, service staff and kitchen staff."
+          },
+          "response": [
+            {
+              "name": "Success - 200",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/orders/:order_id/cancelled",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    ":order_id",
+                    "cancelled"
+                  ],
+                  "variable": [
+                    {
+                      "key": "order_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"server_time\": \"2026-11-01T10:00:00+00:00\",\n    \"data\": {\n        \"id\": 1,\n        \"status\": \"cancelled\",\n        \"created_at\": \"2026-11-01T10:00:00+00:00\",\n        \"user\": {\n            \"id\": 1,\n            \"username\": \"admin\",\n            \"email\": \"admin@example.com\",\n            \"created_at\": \"2026-11-01T10:00:00+00:00\",\n            \"display_name\": \"Admin\"\n        }\n    }\n}"
+            },
+            {
+              "name": "Conflict - 409",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/orders/:order_id/cancelled",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "orders",
+                    ":order_id",
+                    "cancelled"
+                  ],
+                  "variable": [
+                    {
+                      "key": "order_id",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "CONFLICT",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"error\": \"Conflict\",\n    \"message\": \"Order is already cancelled\",\n    \"code\": 409\n}"
+            }
+          ]
         }
       ]
     },
@@ -8844,15 +9180,15 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:5000"
+      "value": "http://localhost:4999"
     },
     {
       "key": "loginUsername",
-      "value": ""
+      "value": "admin"
     },
     {
       "key": "loginPassword",
-      "value": ""
+      "value": "asdf1234"
     },
     {
       "key": "token",
