@@ -87,8 +87,9 @@ class TestProductService(BaseTestCase):
                 self.domain.create_new_product(data=duplicate_data)
 
             assert exc_info.value.code == 409
-            assert "already exists" in exc_info.value.description
-            assert "in category 'Drinks'" in exc_info.value.description
+            assert (
+                "Product with name 'Cola' already exists" in exc_info.value.description
+            )
 
     def test_create_product_with_nonexistent_category_raises_404(self):
         product_data = {

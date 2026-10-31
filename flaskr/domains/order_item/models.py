@@ -12,8 +12,8 @@ if TYPE_CHECKING:
     from flaskr.domains.product.models import Product
 
 
-class OrderDetail(BaseModel):
-    __tablename__ = "order_details"
+class OrderItem(BaseModel):
+    __tablename__ = "order_items"
 
     order_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("orders.id"), primary_key=True
@@ -29,8 +29,8 @@ class OrderDetail(BaseModel):
         DateTime(timezone=True), default=utc_now
     )
 
-    order: Mapped["Order"] = relationship("Order", back_populates="order_details")
-    product: Mapped["Product"] = relationship(back_populates="order_details")
+    order: Mapped["Order"] = relationship("Order", back_populates="items")
+    product: Mapped["Product"] = relationship(back_populates="order_items")
 
     @property
     def serialize(self) -> Dict:

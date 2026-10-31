@@ -26,6 +26,7 @@ class TableListAPI(BaseRoutes):
 
 class TableDetailAPI(BaseRoutes):
     service = TableService()
+    validator = TableUpdateValidator()
 
     @role_required("admin", "service_staff", "kitchen_staff")
     def get(self, table_id: int):  # Get table by id
@@ -34,7 +35,7 @@ class TableDetailAPI(BaseRoutes):
 
     @role_required("admin", "service_staff")
     def patch(self, table_id: int):  # Update table information
-        data = TableUpdateValidator().get_table_status(request.get_json())
+        data = self.validator.get_table_status(request.get_json())
         response = self.service.update_item(item_id=table_id, data=data)
 
         return self.format_response(data=response)

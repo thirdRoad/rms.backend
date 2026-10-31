@@ -13,6 +13,7 @@ from . import bp
 
 class ProductListAPI(BaseRoutes):
     service = ProductService()
+    validator = ProductCreateValidator()
 
     @role_required("admin", "service_staff")
     def get(self):  # List al product
@@ -21,7 +22,7 @@ class ProductListAPI(BaseRoutes):
 
     @role_required("admin")
     def post(self):  # Post product
-        data = ProductCreateValidator().validate_data(request.get_json())
+        data = self.validator.validate_data(request.get_json())
         new_product = self.service.create_new_product(data=data)
 
         response = self.format_response(data=new_product)
@@ -30,6 +31,7 @@ class ProductListAPI(BaseRoutes):
 
 class ProductDetailAPI(BaseRoutes):
     service = ProductService()
+    validator = ProductUpdateValidator()
 
     @role_required("admin", "service_staff")
     def get(self, product_id: int):  # Get product by id
@@ -38,7 +40,7 @@ class ProductDetailAPI(BaseRoutes):
 
     @role_required("admin")
     def patch(self, product_id: int):  # Update product information
-        data = ProductUpdateValidator().validate_data(request.get_json())
+        data = self.validator.validate_data(request.get_json())
         response = self.service.update_item(item_id=product_id, data=data)
         return self.format_response(data=response)
 

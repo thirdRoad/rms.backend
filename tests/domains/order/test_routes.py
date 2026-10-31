@@ -4,7 +4,7 @@ from flaskr.core.extensions import db
 from flaskr.domains.category.models import Category
 from flaskr.domains.order.models import Order
 from flaskr.domains.order.services import OrderService
-from flaskr.domains.order_detail.models import OrderDetail
+from flaskr.domains.order_item.models import OrderItem
 from flaskr.domains.product.models import Product
 from flaskr.domains.role.models import Role
 from flaskr.domains.table.models import Table
@@ -92,10 +92,10 @@ class TestOrderAPI(BaseTestCase):
         self.db.session.add(order)
         self.db.session.commit()
 
-        od1 = OrderDetail(
+        od1 = OrderItem(
             order_id=order.id, product_id=product1_id, quantity=2, unit_price=200.0
         )
-        od2 = OrderDetail(
+        od2 = OrderItem(
             order_id=order.id, product_id=product2_id, quantity=3, unit_price=40.0
         )
         self.db.session.add_all([od1, od2])
@@ -128,6 +128,25 @@ class TestOrderAPI(BaseTestCase):
 
         assert res.status_code == 201
         assert "id" in res.json["data"]
+
+    def test_create_order_with_nonexistent_product_returns_404(self):
+        user = self.db.session.query(User).filter_by(username="testadmin").first()
+        table_id = self.seed_table()
+
+        payload = {
+            "user_id": user.id,
+            "table_id": table_id,
+            "items": [{"product_id": 999, "quantity": 2}],
+        }
+
+        res = self.client.post(
+            "/orders/",
+            json=payload,
+            headers=self.get_auth_headers(),
+        )
+
+        assert res.status_code == 404
+        assert res.json["message"] == "Product not found: [999]"
 
     def test_create_order_invalid_payload_returns_400(self):
         res = self.client.post(
@@ -231,6 +250,7 @@ class TestOrderAPI(BaseTestCase):
         )
 
         assert res.status_code == 404
+        assert res.json["message"] == "Order not found"
 
     def test_update_order_item_returns_updated_data(self):
         order_info = self.create_order()
@@ -299,6 +319,7 @@ class TestOrderAPI(BaseTestCase):
             headers=self.get_auth_headers(),
         )
         assert items_res.status_code == 404
+        assert items_res.json["message"] == "Order has no items"
 
     def test_delete_order_as_service_staff_returns_204(self):
         order_info = self.create_order()

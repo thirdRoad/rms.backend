@@ -1,10 +1,10 @@
 import pytest
-from werkzeug.exceptions import NotFound
+from werkzeug.exceptions import BadRequest, NotFound
 
 from flaskr.domains.category.models import Category
 from flaskr.domains.order.models import Order
 from flaskr.domains.order.services import OrderService
-from flaskr.domains.order_detail.models import OrderDetail
+from flaskr.domains.order_item.models import OrderItem
 from flaskr.domains.product.models import Product
 from flaskr.domains.role.models import Role
 from flaskr.domains.table.models import Table
@@ -73,13 +73,13 @@ class TestOrdersService(BaseTestCase):
         order = Order(user_id=user, table_id=table.id)
         self.db.session.add(order)
         self.db.session.commit()
-        order_details1 = OrderDetail(
+        order_item1 = OrderItem(
             order_id=order.id, product_id=product1, quantity=1, unit_price=200
         )
-        order_details2 = OrderDetail(
+        order_item2 = OrderItem(
             order_id=order.id, product_id=product2, quantity=20, unit_price=100
         )
-        self.db.session.add_all([order_details1, order_details2])
+        self.db.session.add_all([order_item1, order_item2])
         self.db.session.commit()
         return order.id
 
@@ -106,7 +106,7 @@ class TestOrdersService(BaseTestCase):
         order_id = self.seed_order()
 
         with self.app.test_request_context():
-            result = self.domain.get_by_order_id_orderdetails(order_id=order_id)
+            result = self.domain.get_order_items(order_id=order_id)
             assert len(result) == 2
             assert {item["order_id"] for item in result} == {1}
             assert {item["product_id"] for item in result} == {1, 2}
@@ -116,9 +116,10 @@ class TestOrdersService(BaseTestCase):
     def test_get_by_order_id_not_found_returns_404(self):
         with self.app.test_request_context():
             with pytest.raises(NotFound) as exc_info:
-                self.domain.get_by_order_id_orderdetails(999)
+                self.domain.get_order_items(999)
 
             assert exc_info.value.code == 404
+            assert exc_info.value.description == "Order not found"
 
     def test_delete_order_products_returns_true_and_removes(self):
         order_id = self.seed_order()
@@ -126,8 +127,10 @@ class TestOrdersService(BaseTestCase):
         with self.app.test_request_context():
             assert self.domain.delete_order_products(item_id=order_id) is True
 
-            with pytest.raises(NotFound):
-                self.domain.get_by_order_id_orderdetails(order_id)
+            with pytest.raises(NotFound) as exc_info:
+                self.domain.get_order_items(order_id)
+
+            assert exc_info.value.description == "Order has no items"
 
     def test_delete_order_products_nonexistent_item_raises_404(self):
         with self.app.test_request_context():
@@ -196,16 +199,63 @@ class TestOrdersService(BaseTestCase):
         saved = self.db.session.query(Order).filter_by(id="1").one_or_none()
         assert saved is not None
 
+    def test_create_new_order_with_nonexistent_product_raises_404(self):
+        product = self.seed_product()
+        user = self.seed_user()
+        table = Table()
+        self.db.session.add(table)
+        self.db.session.commit()
+        data = {
+            "user_id": user,
+            "table_id": table.id,
+            "items": [
+                {"product_id": product, "quantity": 1},
+                {"product_id": 999, "quantity": 2},
+            ],
+        }
+        with self.app.test_request_context():
+            with pytest.raises(NotFound) as exc_info:
+                self.domain.create_new_order(data)
+
+            assert exc_info.value.description == "Product not found: [999]"
+
+        assert self.db.session.query(Order).count() == 0
+
+    def test_create_new_order_with_duplicate_product_raises_400(self):
+        product = self.seed_product()
+        user = self.seed_user()
+        table = Table()
+        self.db.session.add(table)
+        self.db.session.commit()
+        data = {
+            "user_id": user,
+            "table_id": table.id,
+            "items": [
+                {"product_id": product, "quantity": 1},
+                {"product_id": product, "quantity": 2},
+            ],
+        }
+        with self.app.test_request_context():
+            with pytest.raises(BadRequest) as exc_info:
+                self.domain.create_new_order(data)
+
+            assert (
+                exc_info.value.description
+                == f"Duplicate product_id in items: [{product}]"
+            )
+
+        assert self.db.session.query(Order).count() == 0
+
     def test_update_order_products_returns_data(self):
         order_id = self.seed_order()
-        order_detail = (
-            self.db.session.query(OrderDetail).filter_by(order_id=order_id).first()
+        order_item = (
+            self.db.session.query(OrderItem).filter_by(order_id=order_id).first()
         )
 
         with self.app.test_request_context():
             result = self.domain.update_order_product(
-                order_id=order_detail.order_id,
-                product_id=order_detail.product_id,
+                order_id=order_item.order_id,
+                product_id=order_item.product_id,
                 quantity=3,
             )
 

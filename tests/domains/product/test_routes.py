@@ -121,8 +121,7 @@ class TestProductAPI(BaseTestCase):
         )
 
         assert res.status_code == 409
-        assert "already exists" in res.json["message"]
-        assert "in category 'Burgers'" in res.json["message"]
+        assert "Product with name 'Cheeseburger' already exists" in res.json["message"]
 
     def test_create_product_with_nonexistent_category_returns_404(self):
         res = self.client.post(

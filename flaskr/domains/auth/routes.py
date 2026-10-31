@@ -39,9 +39,10 @@ class BaseAuthAPI(BaseRoutes):
 
 class AuthLoginAPI(BaseAuthAPI):
     service: AuthService = AuthService()
+    validator = AuthLoginValidator()
 
     def post(self):  # Verify user and generate tokens
-        data = AuthLoginValidator().validate_data(data=request.get_json())
+        data = self.validator.validate_data(data=request.get_json())
         tokens = self.service.verify_user(
             username=data["username"], password=data["password"]
         )

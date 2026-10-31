@@ -4,8 +4,7 @@ from flask import abort
 
 from flaskr.core.base.services import BaseService
 from flaskr.domains.order.repositories import OrderRepository
-from flaskr.domains.order_detail.models import OrderDetail
-from flaskr.domains.order_detail.repositories import OrderDetailRepository
+from flaskr.domains.order_item.repositories import OrderItemRepository
 from flaskr.domains.product.repositories import ProductRepository
 from flaskr.domains.table.repositories import TableRepository
 from flaskr.domains.user.repositories import UserRepository
@@ -14,7 +13,7 @@ from flaskr.domains.user.repositories import UserRepository
 class OrderService(BaseService):
     repository: OrderRepository
     repository = OrderRepository()
-    order_detail_repo = OrderDetailRepository()
+    order_item_repo = OrderItemRepository()
     product_repo = ProductRepository()
     table_repo = TableRepository()
     user_repo = UserRepository()
@@ -35,18 +34,29 @@ class OrderService(BaseService):
         }
         return response
 
-    def get_by_order_id_orderdetails(self, order_id: int) -> List[OrderDetail]:
-        orders = self.order_detail_repo.get_by_order_id(order_id)
+    def products_is_exists(self, items: List[Dict[str, Any]]) -> bool:
+        product_ids = [item["product_id"] for item in items]
 
-        if not orders:
+        duplicates = sorted({pid for pid in product_ids if product_ids.count(pid) > 1})
+        if duplicates:
+            abort(400, description=f"Duplicate product_id in items: {duplicates}")
+
+        missing = [
+            pid for pid in product_ids if self.product_repo.get_by_id(pid) is None
+        ]
+        if missing:
+            abort(404, description=f"Product not found: {missing}")
+        return True
+
+    def get_order_items(self, order_id: int) -> List[Dict[str, Any]]:
+        if self.repository.get_by_id(order_id) is None:
             abort(404, description="Order not found")
 
-        response = []
+        items = self.order_item_repo.get_by_order_id(order_id)
+        if not items:
+            abort(404, description="Order has no items")
 
-        for order in orders:
-            response.append(order.serialize)
-
-        return response
+        return [item.serialize for item in items]
 
     def create_new_order(self, data: Dict[str, Any]) -> Dict[str, Any]:
 
@@ -59,6 +69,8 @@ class OrderService(BaseService):
 
         if table is None:
             abort(404, description="Table not found")
+
+        self.products_is_exists(data["items"])
 
         order = self.repository.add(data=data)
         return order.serialize

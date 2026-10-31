@@ -10,6 +10,7 @@ from . import bp
 
 class UserListAPI(BaseRoutes):
     service = UserService()
+    validator = UserCreateValidator()
 
     @role_required("admin")
     def get(self):  # Return all users
@@ -18,7 +19,7 @@ class UserListAPI(BaseRoutes):
 
     @role_required("admin")
     def post(self):  # Post user
-        data = UserCreateValidator().validate_data(request.get_json())
+        data = self.validator.validate_data(request.get_json())
         new_user = self.service.create_new_user(data=data)
 
         response = self.format_response(data=new_user)
@@ -27,6 +28,7 @@ class UserListAPI(BaseRoutes):
 
 class UserDetailAPI(BaseRoutes):
     service = UserService()
+    validator = UserUpdateValidator()
 
     @role_required("admin")
     def get(self, user_id: int):  # Get user by id
@@ -35,7 +37,7 @@ class UserDetailAPI(BaseRoutes):
 
     @role_required("admin")
     def patch(self, user_id: int):  # update user information
-        data = UserUpdateValidator().validate_data(request.get_json())
+        data = self.validator.validate_data(request.get_json())
         response = self.service.update_item(item_id=user_id, data=data)
         return self.format_response(data=response)
 

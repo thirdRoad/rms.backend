@@ -5,15 +5,15 @@ from typing_extensions import override
 from flaskr.core.base.repositories import BaseRepository
 from flaskr.core.extensions import db
 from flaskr.domains.order.models import Order
-from flaskr.domains.order_detail.models import OrderDetail
-from flaskr.domains.order_detail.repositories import OrderDetailRepository
+from flaskr.domains.order_item.models import OrderItem
+from flaskr.domains.order_item.repositories import OrderItemRepository
 from flaskr.domains.product.repositories import ProductRepository
 
 
 class OrderRepository(BaseRepository[Order]):
     model = Order
     product_repo = ProductRepository()
-    order_detail_repo = OrderDetailRepository()
+    order_item_repo = OrderItemRepository()
 
     @override
     def add(self, data: Dict[str, Any]) -> Order:
@@ -37,7 +37,7 @@ class OrderRepository(BaseRepository[Order]):
                     }
                 )
 
-        self.order_detail_repo.add_bulk(order.id, details_to_add)
+        self.order_item_repo.add_bulk(order.id, details_to_add)
 
         db.session.commit()
 
@@ -47,7 +47,7 @@ class OrderRepository(BaseRepository[Order]):
         self, order_id: int
     ) -> bool:  # delete order details fonks
         try:
-            result = self.order_detail_repo.delete_all_by_order_id(order_id=order_id)
+            result = self.order_item_repo.delete_all_by_order_id(order_id=order_id)
             db.session.commit()
             return result
         except Exception as e:
@@ -58,9 +58,9 @@ class OrderRepository(BaseRepository[Order]):
 
     def update_order_product(
         self, order_id: int, product_id: int, quantity: int
-    ) -> OrderDetail:
+    ) -> OrderItem:
         product = self.product_repo.get_by_id(product_id)
-        item = self.order_detail_repo.upsert_item(
+        item = self.order_item_repo.upsert_item(
             order_id=order_id,
             product_id=product_id,
             quantity=quantity,

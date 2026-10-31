@@ -10,6 +10,7 @@ from . import bp
 
 class OrderListAPI(BaseRoutes):
     service = OrderService()
+    validator = OrderCreateValidator()
 
     @role_required("admin", "service_staff", "kitchen_staff")
     def get(self):  # List all order id and created_at
@@ -18,7 +19,7 @@ class OrderListAPI(BaseRoutes):
 
     @role_required("admin", "service_staff")
     def post(self):  # Post order with products
-        data = OrderCreateValidator().validate_data(request.get_json())
+        data = self.validator.validate_data(request.get_json())
         response = self.service.create_new_order(data=data)
         return self.format_response(data=response), 201
 
@@ -28,16 +29,17 @@ class OrderItemsAPI(BaseRoutes):
 
     @role_required("admin", "service_staff", "kitchen_staff")
     def get(self, order_id: int):  # get order details
-        response = self.service.get_by_order_id_orderdetails(order_id=order_id)
+        response = self.service.get_order_items(order_id=order_id)
         return self.format_plural_response(data=response)
 
 
 class OrderUpdateAPI(BaseRoutes):
     service = OrderService()
+    validator = OrderUpdateValidator()
 
     @role_required("admin", "service_staff")
     def patch(self, order_id: int, product_id: int):  # Update order products
-        data = OrderUpdateValidator().validate_data(request.get_json())
+        data = self.validator.validate_data(request.get_json())
         quantity = data["quantity"]
         response = self.service.update_order_product(
             order_id=order_id, product_id=product_id, quantity=quantity
