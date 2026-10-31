@@ -76,26 +76,22 @@ class OrderService(BaseService):
         order = self.repository.add(data=data)
         return order.serialize
 
-    # update order detail products and quantity
-    def update_order_product(
-        self, order_id: int, product_id: int, quantity: int
-    ) -> Dict[str, Any]:
+    # body is the final item list: update existing, add new, remove the missing ones
+    def update_order_items(
+        self, order_id: int, items: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         order = self.repository.get_by_id(order_id)
         if order is None:
             abort(404, description="Order not found")
 
-        product = self.product_repo.get_by_id(product_id)
-        if product is None:
-            abort(404, description="Product not found")
+        self.products_is_exists(items)
 
-        item = self.repository.update_order_product(
-            order_id=order_id, product_id=product_id, quantity=quantity
-        )
-        return item.serialize
+        self.repository.replace_order_items(order_id=order_id, items=items)
+        return self.get_order_items(order_id=order_id)
 
     # delete order details fonks
     def delete_order_products(self, item_id: int) -> bool:
         order = self.repository.get_by_id(item_id)
         if order is None:
-            abort(404, description="Order is not found")
+            abort(404, description="Order not found")
         return self.repository.delete_order_products(order_id=item_id)

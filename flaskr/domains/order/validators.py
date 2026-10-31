@@ -22,4 +22,8 @@ class OrderCreateValidator(BaseValidator):
 
 
 class OrderUpdateValidator(BaseValidator):
-    quantity = fields.Int(required=True, validate=validate.Range(min=1))
+    items = fields.List(
+        fields.Nested(OrderItemValidator),
+        required=True,
+        validate=validate.Length(min=1),
+    )

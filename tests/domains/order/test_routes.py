@@ -253,63 +253,105 @@ class TestOrderAPI(BaseTestCase):
         assert res.status_code == 404
         assert res.json["message"] == "Order not found"
 
-    def test_update_order_item_returns_updated_data(self):
-        order_info = self.create_order()
+    def test_update_order_replaces_items_with_given_list(self):
+        order_info = self.create_order()  # Pizza x2, Cola x3
         order_id = order_info["order_id"]
-        product_id = order_info["product1_id"]
+        burger_id = self.seed_product(name="Burger", price=150.0)
 
         res = self.client.patch(
-            f"/orders/{order_id}/items/{product_id}",
-            json={"quantity": 5},
+            f"/orders/{order_id}",
+            json={
+                "items": [
+                    {"product_id": order_info["product2_id"], "quantity": 10},
+                    {"product_id": burger_id, "quantity": 1},
+                ]
+            },
             headers=self.get_auth_headers(),
         )
 
         assert res.status_code == 200
-        assert res.json["data"]["quantity"] == 5
-        assert res.json["data"]["product_id"] == product_id
+        assert res.json["count"] == 2
+        quantities = {i["product_id"]: i["quantity"] for i in res.json["data"]}
+        assert quantities == {order_info["product2_id"]: 10, burger_id: 1}
 
-    def test_update_order_item_as_service_staff_returns_200(self):
+        removed = self.db.session.get(OrderItem, (order_id, order_info["product1_id"]))
+        assert removed is None
+
+        order = self.db.session.get(Order, order_id)
+        assert order.table_id == order_info["table_id"]
+
+    def test_update_order_as_service_staff_returns_200(self):
         order_info = self.create_order()
-        order_id = order_info["order_id"]
-        product_id = order_info["product1_id"]
 
         res = self.client.patch(
-            f"/orders/{order_id}/items/{product_id}",
-            json={"quantity": 4},
+            f"/orders/{order_info['order_id']}",
+            json={"items": [{"product_id": order_info["product1_id"], "quantity": 4}]},
             headers=self.get_auth_headers("teststaff", "staffpass"),
         )
 
         assert res.status_code == 200
-        assert res.json["data"]["quantity"] == 4
 
-    def test_update_order_item_as_kitchen_staff_returns_403(self):
+    def test_update_order_as_kitchen_staff_returns_403(self):
         order_info = self.create_order()
-        order_id = order_info["order_id"]
-        product_id = order_info["product1_id"]
 
         res = self.client.patch(
-            f"/orders/{order_id}/items/{product_id}",
-            json={"quantity": 4},
+            f"/orders/{order_info['order_id']}",
+            json={"items": [{"product_id": order_info["product1_id"], "quantity": 4}]},
             headers=self.get_auth_headers("testkitchen", "kitchenpass"),
         )
 
         assert res.status_code == 403
 
-    def test_update_nonexistent_order_item_returns_404(self):
+    def test_update_nonexistent_order_returns_404(self):
         res = self.client.patch(
-            "/orders/999/items/999",
+            "/orders/999",
+            json={"items": [{"product_id": 1, "quantity": 5}]},
+            headers=self.get_auth_headers(),
+        )
+
+        assert res.status_code == 404
+        assert res.json["message"] == "Order not found"
+
+    def test_update_order_with_nonexistent_product_returns_404(self):
+        order_info = self.create_order()
+
+        res = self.client.patch(
+            f"/orders/{order_info['order_id']}",
+            json={"items": [{"product_id": 999, "quantity": 1}]},
+            headers=self.get_auth_headers(),
+        )
+
+        assert res.status_code == 404
+        assert res.json["message"] == "Product not found: [999]"
+
+    def test_update_order_with_empty_items_returns_400(self):
+        order_info = self.create_order()
+
+        res = self.client.patch(
+            f"/orders/{order_info['order_id']}",
+            json={"items": []},
+            headers=self.get_auth_headers(),
+        )
+
+        assert res.status_code == 400
+
+    def test_old_item_update_url_is_removed(self):
+        order_info = self.create_order()
+
+        res = self.client.patch(
+            f"/orders/{order_info['order_id']}/items/{order_info['product1_id']}",
             json={"quantity": 5},
             headers=self.get_auth_headers(),
         )
 
         assert res.status_code == 404
 
-    def test_delete_order_returns_204_and_removes_items(self):
+    def test_delete_order_items_returns_204_and_keeps_order(self):
         order_info = self.create_order()
         order_id = order_info["order_id"]
 
         res = self.client.delete(
-            f"/orders/{order_id}",
+            f"/orders/{order_id}/items",
             headers=self.get_auth_headers(),
         )
 
@@ -322,7 +364,65 @@ class TestOrderAPI(BaseTestCase):
         assert items_res.status_code == 404
         assert items_res.json["message"] == "Order has no items"
 
-    def test_delete_order_as_service_staff_returns_204(self):
+        order_res = self.client.get(
+            f"/orders/{order_id}",
+            headers=self.get_auth_headers(),
+        )
+        assert order_res.status_code == 200
+
+    def test_delete_order_items_as_service_staff_returns_204(self):
+        order_info = self.create_order()
+        order_id = order_info["order_id"]
+
+        res = self.client.delete(
+            f"/orders/{order_id}/items",
+            headers=self.get_auth_headers("teststaff", "staffpass"),
+        )
+
+        assert res.status_code == 204
+
+    def test_delete_order_items_as_kitchen_staff_returns_403(self):
+        order_info = self.create_order()
+        order_id = order_info["order_id"]
+
+        res = self.client.delete(
+            f"/orders/{order_id}/items",
+            headers=self.get_auth_headers("testkitchen", "kitchenpass"),
+        )
+
+        assert res.status_code == 403
+
+    def test_delete_items_of_nonexistent_order_returns_404(self):
+        res = self.client.delete(
+            "/orders/999/items",
+            headers=self.get_auth_headers(),
+        )
+
+        assert res.status_code == 404
+        assert res.json["message"] == "Order not found"
+
+    def test_delete_order_returns_204_and_removes_order_with_items(self):
+        order_info = self.create_order()
+        order_id = order_info["order_id"]
+
+        res = self.client.delete(
+            f"/orders/{order_id}",
+            headers=self.get_auth_headers(),
+        )
+
+        assert res.status_code == 204
+        assert self.db.session.get(Order, order_id) is None
+        assert (
+            self.db.session.query(OrderItem).filter_by(order_id=order_id).count() == 0
+        )
+
+        get_res = self.client.get(
+            f"/orders/{order_id}",
+            headers=self.get_auth_headers(),
+        )
+        assert get_res.status_code == 404
+
+    def test_delete_order_as_service_staff_returns_403(self):
         order_info = self.create_order()
         order_id = order_info["order_id"]
 
@@ -331,7 +431,8 @@ class TestOrderAPI(BaseTestCase):
             headers=self.get_auth_headers("teststaff", "staffpass"),
         )
 
-        assert res.status_code == 204
+        assert res.status_code == 403
+        assert self.db.session.get(Order, order_id) is not None
 
     def test_delete_order_as_kitchen_staff_returns_403(self):
         order_info = self.create_order()
@@ -351,3 +452,4 @@ class TestOrderAPI(BaseTestCase):
         )
 
         assert res.status_code == 404
+        assert res.json["message"] == "Order not found"

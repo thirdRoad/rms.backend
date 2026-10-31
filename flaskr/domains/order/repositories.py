@@ -1,5 +1,6 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
+from sqlalchemy.exc import SQLAlchemyError
 from typing_extensions import override
 
 from flaskr.core.base.repositories import BaseRepository
@@ -54,17 +55,28 @@ class OrderRepository(BaseRepository[Order]):
             db.session.rollback()
             raise e
 
-        # update order detail products and quantity
+    def replace_order_items(
+        self, order_id: int, items: List[Dict[str, Any]]
+    ) -> List[OrderItem]:
+        keep_ids = {item["product_id"] for item in items}
+        try:
+            for existing in self.order_item_repo.get_by_order_id(order_id):
+                if existing.product_id not in keep_ids:
+                    db.session.delete(existing)
 
-    def update_order_product(
-        self, order_id: int, product_id: int, quantity: int
-    ) -> OrderItem:
-        product = self.product_repo.get_by_id(product_id)
-        item = self.order_item_repo.upsert_item(
-            order_id=order_id,
-            product_id=product_id,
-            quantity=quantity,
-            unit_price=product.price,
-        )
-        db.session.commit()
-        return item
+            result = []
+            for item in items:
+                product = self.product_repo.get_by_id(item["product_id"])
+                result.append(
+                    self.order_item_repo.upsert_item(
+                        order_id=order_id,
+                        product_id=product.id,
+                        quantity=item["quantity"],
+                        unit_price=product.price,
+                    )
+                )
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise
+        return result

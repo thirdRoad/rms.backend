@@ -32,24 +32,15 @@ class OrderItemsAPI(BaseRoutes):
         response = self.service.get_order_items(order_id=order_id)
         return self.format_plural_response(data=response)
 
-
-class OrderUpdateAPI(BaseRoutes):
-    service = OrderService()
-    validator = OrderUpdateValidator()
-
     @role_required("admin", "service_staff")
-    def patch(self, order_id: int, product_id: int):  # Update order products
-        data = self.validator.validate_data(request.get_json())
-        quantity = data["quantity"]
-        response = self.service.update_order_product(
-            order_id=order_id, product_id=product_id, quantity=quantity
-        )
-
-        return self.format_response(data=response)
+    def delete(self, order_id: int):  # Delete all items of the order
+        self.service.delete_order_products(item_id=order_id)
+        return "", 204
 
 
 class OrderDetailAPI(BaseRoutes):
     service = OrderService()
+    validator = OrderUpdateValidator()
 
     @role_required("admin", "service_staff", "kitchen_staff")
     def get(self, order_id: int):  # get order and user by id
@@ -57,8 +48,16 @@ class OrderDetailAPI(BaseRoutes):
         return self.format_response(data=order)
 
     @role_required("admin", "service_staff")
-    def delete(self, order_id: int):  # Delete order products
-        self.service.delete_order_products(item_id=order_id)
+    def patch(self, order_id: int):  # Replace order items with the given list
+        data = self.validator.validate_data(request.get_json())
+        response = self.service.update_order_items(
+            order_id=order_id, items=data["items"]
+        )
+        return self.format_plural_response(data=response)
+
+    @role_required("admin")
+    def delete(self, order_id: int):  # Delete the order with its items
+        self.service.delete_item(item_id=order_id)
         return "", 204
 
 
@@ -69,17 +68,12 @@ bp.add_url_rule(
 bp.add_url_rule(
     "/<int:order_id>",
     view_func=OrderDetailAPI.as_view("order_detail_api"),
-    methods=["GET", "DELETE"],
-)
-bp.add_url_rule(
-    "/<int:order_id>/items/<int:product_id>",
-    view_func=OrderUpdateAPI.as_view("order_update_api"),
-    methods=["PATCH"],
+    methods=["GET", "PATCH", "DELETE"],
 )
 
 
 bp.add_url_rule(
     "/<int:order_id>/items",
     view_func=OrderItemsAPI.as_view("order_items_api"),
-    methods=["GET"],
+    methods=["GET", "DELETE"],
 )

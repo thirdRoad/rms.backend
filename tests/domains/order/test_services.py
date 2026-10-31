@@ -246,22 +246,64 @@ class TestOrdersService(BaseTestCase):
 
         assert self.db.session.query(Order).count() == 0
 
-    def test_update_order_products_returns_data(self):
-        order_id = self.seed_order()
-        order_item = (
-            self.db.session.query(OrderItem).filter_by(order_id=order_id).first()
-        )
+    def test_update_order_items_replaces_items_with_given_list(self):
+        order_id = self.seed_order()  # product 1 x1, product 2 x20
+        new_product = self.seed_product(c_name="Drinks", p_name="Cola", price=40.0)
 
         with self.app.test_request_context():
-            result = self.domain.update_order_product(
-                order_id=order_item.order_id,
-                product_id=order_item.product_id,
-                quantity=3,
+            result = self.domain.update_order_items(
+                order_id=order_id,
+                items=[
+                    {"product_id": 1, "quantity": 3},
+                    {"product_id": new_product, "quantity": 2},
+                ],
             )
 
-            assert result["quantity"] == 3
+        quantities = {item["product_id"]: item["quantity"] for item in result}
+        assert quantities == {1: 3, new_product: 2}
 
-    def test_update_nonexistent_item_raises_404(self):
+        assert self.db.session.get(OrderItem, (order_id, 2)) is None
+        assert self.db.session.get(OrderItem, (order_id, 1)).unit_price == 200
+        assert self.db.session.get(OrderItem, (order_id, new_product)).unit_price == 40
+
+    def test_update_order_items_nonexistent_order_raises_404(self):
         with self.app.test_request_context():
-            with pytest.raises(NotFound):
-                self.domain.update_order_product(order_id=999, product_id=1, quantity=3)
+            with pytest.raises(NotFound) as exc_info:
+                self.domain.update_order_items(
+                    order_id=999, items=[{"product_id": 1, "quantity": 3}]
+                )
+
+            assert exc_info.value.description == "Order not found"
+
+    def test_update_order_items_nonexistent_product_raises_404_and_changes_nothing(
+        self,
+    ):
+        order_id = self.seed_order()
+
+        with self.app.test_request_context():
+            with pytest.raises(NotFound) as exc_info:
+                self.domain.update_order_items(
+                    order_id=order_id,
+                    items=[
+                        {"product_id": 1, "quantity": 9},
+                        {"product_id": 999, "quantity": 1},
+                    ],
+                )
+
+            assert exc_info.value.description == "Product not found: [999]"
+
+        assert self.db.session.get(OrderItem, (order_id, 1)).quantity == 1
+        assert self.db.session.get(OrderItem, (order_id, 2)) is not None
+
+    def test_update_order_items_duplicate_product_raises_400(self):
+        order_id = self.seed_order()
+
+        with self.app.test_request_context():
+            with pytest.raises(BadRequest):
+                self.domain.update_order_items(
+                    order_id=order_id,
+                    items=[
+                        {"product_id": 1, "quantity": 2},
+                        {"product_id": 1, "quantity": 5},
+                    ],
+                )
