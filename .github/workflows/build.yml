@@ -1,0 +1,215 @@
+name: Build
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+  POETRY_VERSION: "2.3.4"
+  TRIVY_VERSION: "v0.76.1"
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: pipx install poetry==${{ env.POETRY_VERSION }}
+
+      - name: Install dependencies
+        run: poetry install --no-root --no-interaction
+
+      - name: Run tests
+        run: poetry run pytest -v
+
+  trivy-fs:
+    name: Trivy - Repository Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Security report
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig,secret
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: table
+          output: trivy-fs.txt
+          exit-code: "0"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trivy-report-fs
+          path: trivy-fs.txt
+          retention-days: 1
+          if-no-files-found: ignore
+
+  build-image:
+    name: Build & Scan Docker Image
+    runs-on: ubuntu-latest
+    needs: [test, trivy-fs]
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set image name
+        id: image
+        shell: bash
+        run: |
+          IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/rms-backend"
+          echo "name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build production image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: prod
+          load: true
+          tags: ${{ steps.image.outputs.name }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Security report
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          image-ref: ${{ steps.image.outputs.name }}:${{ github.sha }}
+          scanners: vuln,secret,license
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: table
+          output: trivy-image.txt
+          exit-code: "0"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trivy-report-image
+          path: trivy-image.txt
+          retention-days: 1
+          if-no-files-found: ignore
+
+      - name: Generate CycloneDX SBOM
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          image-ref: ${{ steps.image.outputs.name }}:${{ github.sha }}
+          format: cyclonedx
+          output: sbom.cdx.json
+          exit-code: "0"
+          skip-setup-trivy: true
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom-${{ github.sha }}
+          path: sbom.cdx.json
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image
+        if: github.event_name == 'push'
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+        run: |
+          docker tag "$IMAGE:${GITHUB_SHA}" "$IMAGE:develop"
+          docker push "$IMAGE:${GITHUB_SHA}"
+          docker push "$IMAGE:develop"
+
+  security-report:
+    name: Security Report
+    runs-on: ubuntu-latest
+    needs: [trivy-fs, build-image]
+    if: always()
+
+    steps:
+      - name: Download reports
+        uses: actions/download-artifact@v8
+        with:
+          pattern: trivy-report-*
+          merge-multiple: true
+          path: reports
+
+      - name: Write job summary
+        env:
+          FS_RESULT: ${{ needs.trivy-fs.result }}
+          IMAGE_RESULT: ${{ needs.build-image.result }}
+        run: |
+          section() {
+            echo "## $1"
+            echo ""
+            echo "Job result: \`$2\`"
+            echo ""
+            if [ ! -f "$3" ]; then
+              echo "_Scan did not run._"
+            elif [ -s "$3" ]; then
+              echo '```'
+              cat "$3"
+              echo '```'
+            else
+              echo "No CRITICAL or HIGH findings."
+            fi
+            echo ""
+          }
+          {
+            echo "# Trivy Security Report"
+            echo ""
+            echo "Severity: CRITICAL, HIGH. Vulnerabilities without a published fix are hidden."
+            echo ""
+            section "Repository (dependencies, Dockerfile, secrets)" "$FS_RESULT" reports/trivy-fs.txt
+            section "Docker image (OS packages, Python packages, secrets, licenses)" "$IMAGE_RESULT" reports/trivy-image.txt
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Combine reports into one artifact
+        if: hashFiles('reports/*.txt') != ''
+        uses: actions/upload-artifact/merge@v7
+        with:
+          name: security-report-${{ github.sha }}
+          pattern: trivy-report-*
+          retention-days: 30
+          delete-merged: true
