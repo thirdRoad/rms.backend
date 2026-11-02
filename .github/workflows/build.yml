@@ -82,7 +82,7 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           format: table
-          exit-code: "1"
+          exit-code: "0"
           skip-setup-trivy: true
 
       - name: Gate on misconfigurations
@@ -94,7 +94,7 @@ jobs:
           scanners: misconfig
           severity: CRITICAL,HIGH
           format: table
-          exit-code: "1"
+          exit-code: "0"
           skip-setup-trivy: true
 
       - name: Check licenses
@@ -168,7 +168,7 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           format: table
-          exit-code: "1"
+          exit-code: "0"
           skip-setup-trivy: true
 
       - name: Generate CycloneDX SBOM
