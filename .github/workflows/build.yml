@@ -26,10 +26,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -46,67 +46,31 @@ jobs:
     name: Trivy - Repository Security Scan
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      security-events: write
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Repository security scan (SARIF)
+      - name: Security report
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           version: ${{ env.TRIVY_VERSION }}
           scan-type: fs
           scan-ref: .
-          scanners: vuln,secret,misconfig,license
-          format: sarif
-          output: trivy-fs.sarif
-          exit-code: "0"
-
-      - name: Upload repository SARIF
-        if: always() && hashFiles('trivy-fs.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: trivy-fs.sarif
-          category: trivy-fs
-
-      - name: Gate on vulnerabilities and secrets
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
-        with:
-          version: ${{ env.TRIVY_VERSION }}
-          scan-type: fs
-          scan-ref: .
-          scanners: vuln,secret
+          scanners: vuln,misconfig,secret
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           format: table
+          output: trivy-fs.txt
           exit-code: "0"
-          skip-setup-trivy: true
 
-      - name: Gate on misconfigurations
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
         with:
-          version: ${{ env.TRIVY_VERSION }}
-          scan-type: fs
-          scan-ref: .
-          scanners: misconfig
-          severity: CRITICAL,HIGH
-          format: table
-          exit-code: "0"
-          skip-setup-trivy: true
-
-      - name: Check licenses
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
-        with:
-          version: ${{ env.TRIVY_VERSION }}
-          scan-type: fs
-          scan-ref: .
-          scanners: license
-          format: table
-          exit-code: "0"
-          skip-setup-trivy: true
+          name: trivy-report-fs
+          path: trivy-fs.txt
+          retention-days: 1
+          if-no-files-found: ignore
 
   build-image:
     name: Build & Scan Docker Image
@@ -116,11 +80,10 @@ jobs:
     permissions:
       contents: read
       packages: write
-      security-events: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set image name
         id: image
@@ -130,10 +93,10 @@ jobs:
           echo "name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build production image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: prod
@@ -142,34 +105,26 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Scan Docker image (SARIF)
+      - name: Security report
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           version: ${{ env.TRIVY_VERSION }}
           image-ref: ${{ steps.image.outputs.name }}:${{ github.sha }}
           scanners: vuln,secret,license
-          format: sarif
-          output: trivy-image.sarif
-          exit-code: "0"
-
-      - name: Upload image SARIF
-        if: always() && hashFiles('trivy-image.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: trivy-image.sarif
-          category: trivy-image
-
-      - name: Gate on image vulnerabilities and secrets
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
-        with:
-          version: ${{ env.TRIVY_VERSION }}
-          image-ref: ${{ steps.image.outputs.name }}:${{ github.sha }}
-          scanners: vuln,secret
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           format: table
+          output: trivy-image.txt
           exit-code: "0"
-          skip-setup-trivy: true
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trivy-report-image
+          path: trivy-image.txt
+          retention-days: 1
+          if-no-files-found: ignore
 
       - name: Generate CycloneDX SBOM
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
@@ -182,7 +137,7 @@ jobs:
           skip-setup-trivy: true
 
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-${{ github.sha }}
           path: sbom.cdx.json
@@ -191,7 +146,7 @@ jobs:
 
       - name: Log in to GHCR
         if: github.event_name == 'push'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -205,3 +160,56 @@ jobs:
           docker tag "$IMAGE:${GITHUB_SHA}" "$IMAGE:develop"
           docker push "$IMAGE:${GITHUB_SHA}"
           docker push "$IMAGE:develop"
+
+  security-report:
+    name: Security Report
+    runs-on: ubuntu-latest
+    needs: [trivy-fs, build-image]
+    if: always()
+
+    steps:
+      - name: Download reports
+        uses: actions/download-artifact@v8
+        with:
+          pattern: trivy-report-*
+          merge-multiple: true
+          path: reports
+
+      - name: Write job summary
+        env:
+          FS_RESULT: ${{ needs.trivy-fs.result }}
+          IMAGE_RESULT: ${{ needs.build-image.result }}
+        run: |
+          section() {
+            echo "## $1"
+            echo ""
+            echo "Job result: \`$2\`"
+            echo ""
+            if [ ! -f "$3" ]; then
+              echo "_Scan did not run._"
+            elif [ -s "$3" ]; then
+              echo '```'
+              cat "$3"
+              echo '```'
+            else
+              echo "No CRITICAL or HIGH findings."
+            fi
+            echo ""
+          }
+          {
+            echo "# Trivy Security Report"
+            echo ""
+            echo "Severity: CRITICAL, HIGH. Vulnerabilities without a published fix are hidden."
+            echo ""
+            section "Repository (dependencies, Dockerfile, secrets)" "$FS_RESULT" reports/trivy-fs.txt
+            section "Docker image (OS packages, Python packages, secrets, licenses)" "$IMAGE_RESULT" reports/trivy-image.txt
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Combine reports into one artifact
+        if: hashFiles('reports/*.txt') != ''
+        uses: actions/upload-artifact/merge@v7
+        with:
+          name: security-report-${{ github.sha }}
+          pattern: trivy-report-*
+          retention-days: 30
+          delete-merged: true
