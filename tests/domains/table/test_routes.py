@@ -2,8 +2,8 @@ from werkzeug.security import generate_password_hash
 
 from flaskr.core.extensions import db
 from flaskr.domains.role.models import Role
-from flaskr.domains.tables.models import Table, TableStatus
-from flaskr.domains.tables.services import TableService
+from flaskr.domains.table.models import Table, TableStatus
+from flaskr.domains.table.services import TableService
 from flaskr.domains.user.models import User
 from tests.base import BaseTestCase
 

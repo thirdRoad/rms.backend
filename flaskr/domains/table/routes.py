@@ -2,8 +2,8 @@ from flask import request
 
 from flaskr.core.base.routes import BaseRoutes
 from flaskr.core.decorators import role_required
-from flaskr.domains.tables.services import TableService
-from flaskr.domains.tables.validators import TableUpdateValidator
+from flaskr.domains.table.services import TableService
+from flaskr.domains.table.validators import TableUpdateValidator
 
 from . import bp
 
@@ -26,6 +26,7 @@ class TableListAPI(BaseRoutes):
 
 class TableDetailAPI(BaseRoutes):
     service = TableService()
+    validator = TableUpdateValidator()
 
     @role_required("admin", "service_staff", "kitchen_staff")
     def get(self, table_id: int):  # Get table by id
@@ -34,7 +35,7 @@ class TableDetailAPI(BaseRoutes):
 
     @role_required("admin", "service_staff")
     def patch(self, table_id: int):  # Update table information
-        data = TableUpdateValidator().get_table_status(request.get_json())
+        data = self.validator.get_table_status(request.get_json())
         response = self.service.update_item(item_id=table_id, data=data)
 
         return self.format_response(data=response)

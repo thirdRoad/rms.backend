@@ -35,8 +35,9 @@ class BaseService(Generic[T]):
         ):
             abort(
                 code=409,
-                description=f"already exists"
-                f" detail: id -> {existing_item.serialize.get("id")}",
+                description=f"{model_class.__name__} with {column_name}"
+                f" '{unique_key}' already exists"
+                f" (id: {existing_item.serialize.get("id")})",
             )
 
         new_item = self.repository.add(model_class(**kwargs))

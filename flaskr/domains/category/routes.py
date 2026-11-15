@@ -9,6 +9,7 @@ from flaskr.domains.category.validators import CategoryValidator
 
 class CategoryListAPI(BaseRoutes):
     service = CategoryService()
+    validator = CategoryValidator()
 
     @role_required("admin", "service_staff")
     def get(self):  # list all category
@@ -17,7 +18,7 @@ class CategoryListAPI(BaseRoutes):
 
     @role_required("admin")
     def post(self):  # post category
-        data = CategoryValidator().validate_data(request.get_json())
+        data = self.validator.validate_data(request.get_json())
         new_category = self.service.create_new_category(data=data)
 
         response = self.format_response(data=new_category)
@@ -26,6 +27,7 @@ class CategoryListAPI(BaseRoutes):
 
 class CategoryDetailsAPI(BaseRoutes):
     service = CategoryService()
+    validator = CategoryValidator()
 
     @role_required("admin", "service_staff")
     def get(self, category_id: int):  # get category by id
@@ -34,7 +36,7 @@ class CategoryDetailsAPI(BaseRoutes):
 
     @role_required("admin")
     def patch(self, category_id: int):  # update category
-        data = CategoryValidator().validate_data(request.get_json())
+        data = self.validator.validate_data(request.get_json())
 
         response = self.service.update_item(item_id=category_id, data=data)
         return self.format_response(data=response)

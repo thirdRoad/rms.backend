@@ -1,14 +1,15 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING, Dict
 
 from sqlalchemy import DateTime, Float, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from flaskr.core.base.model import BaseModel, mapped_foreign_key
+from flaskr.core.base.models import BaseModel, mapped_foreign_key
+from flaskr.core.utils import to_iso, utc_now
 
 if TYPE_CHECKING:
     from flaskr.domains.category.models import Category
-    from flaskr.domains.orderDetails.models import OrderDetail
+    from flaskr.domains.order_item.models import OrderItem
 
 
 class Product(BaseModel):
@@ -17,7 +18,7 @@ class Product(BaseModel):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=utc_now
     )
     price: Mapped[float] = mapped_column(Float, default=0)
     stock: Mapped[int] = mapped_column(Integer, default=0)
@@ -25,14 +26,14 @@ class Product(BaseModel):
     category_id: Mapped[int] = mapped_foreign_key("category.id")
     category: Mapped["Category"] = relationship(back_populates="products")
 
-    order_details: Mapped[list["OrderDetail"]] = relationship(back_populates="product")
+    order_items: Mapped[list["OrderItem"]] = relationship(back_populates="product")
 
     @property
     def serialize(self) -> Dict:
         return {
             "id": self.id,
             "name": self.name,
-            "created_at": self.created_at.isoformat(),
+            "created_at": to_iso(self.created_at),
             "price": self.price,
             "stock": self.stock,
         }
