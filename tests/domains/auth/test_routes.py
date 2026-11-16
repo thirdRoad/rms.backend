@@ -45,10 +45,11 @@ class TestAuthAPI(BaseTestCase):
             json={"username": username, "password": password},
         )
 
-    def get_auth_headers(self, username: str = "testadmin", password: str = "adminpass") -> dict:
+    def get_auth_headers(
+        self, username: str = "testadmin", password: str = "adminpass"
+    ) -> dict:
         token = self.login(username, password).json["data"]["access_token"]
         return {"Authorization": f"Bearer {token}"}
-
 
     def test_login_success_returns_tokens(self):
         res = self.login()
@@ -85,7 +86,6 @@ class TestAuthAPI(BaseTestCase):
         assert res.status_code == 400
         assert "password" in res.json["message"]
 
-
     def test_logout_returns_success_message(self):
         res = self.client.post("/auth/logout", headers=self.get_auth_headers())
 
@@ -104,12 +104,10 @@ class TestAuthAPI(BaseTestCase):
     def test_logout_revokes_token(self):
         headers = self.get_auth_headers()
 
-
         res = self.client.get("/auth/me", headers=headers)
         assert res.status_code == 200
 
         self.client.post("/auth/logout", headers=headers)
-
 
         res = self.client.get("/auth/me", headers=headers)
         assert res.status_code == 401
@@ -118,7 +116,6 @@ class TestAuthAPI(BaseTestCase):
         res = self.client.post("/auth/logout")
 
         assert res.status_code == 401
-
 
     def test_me_returns_current_user(self):
         res = self.client.get("/auth/me", headers=self.get_auth_headers())
@@ -142,12 +139,58 @@ class TestAuthAPI(BaseTestCase):
 
         assert res.status_code == 403
 
-    def test_me_with_malformed_token_returns_422(self):
-
-
+    def test_me_with_malformed_token_returns_401(self):
         res = self.client.get(
             "/auth/me",
             headers={"Authorization": "Bearer not.a.real.token"},
         )
 
-        assert res.status_code == 422
+        assert res.status_code == 401
+        assert res.json == {
+            "error": "Unauthorized",
+            "message": "Invalid token",
+            "code": 401,
+        }
+
+    def test_me_without_token_returns_standard_error_format(self):
+        res = self.client.get("/auth/me")
+
+        assert res.json == {
+            "error": "Unauthorized",
+            "message": "Missing authorization token",
+            "code": 401,
+        }
+
+    def test_me_with_revoked_token_returns_standard_error_format(self):
+        headers = self.get_auth_headers()
+        self.client.post("/auth/logout", headers=headers)
+
+        res = self.client.get("/auth/me", headers=headers)
+
+        assert res.json == {
+            "error": "Unauthorized",
+            "message": "Token has been revoked",
+            "code": 401,
+        }
+
+    def test_login_with_uppercase_username_returns_401(self):
+        res = self.login(username="TestAdmin")
+
+        assert res.status_code == 401
+        assert res.json["message"] == "Invalid credentials"
+
+    def test_login_with_null_body_returns_400(self):
+        res = self.client.post(
+            "/auth/login", data="null", content_type="application/json"
+        )
+
+        assert res.status_code == 400
+        assert res.json["message"] == {"_schema": ["Invalid input type."]}
+
+    def test_login_with_non_string_username_returns_400(self):
+        res = self.client.post(
+            "/auth/login", json={"username": 12345, "password": "adminpass"}
+        )
+
+        assert res.status_code == 400
+        assert res.json["message"] == {"username": ["Not a valid string."]}
