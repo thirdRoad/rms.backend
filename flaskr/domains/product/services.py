@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from flask import abort
 
@@ -30,6 +30,21 @@ class ProductService(BaseService):
             "name": product.category.name,
         }
         return response
+
+    def search_by_product_name(self, value: str) -> List[dict]:
+        if not value:
+            abort(400, description="Search value is required")
+
+        products = self.repository.search_by_product_name(value=value)
+
+        return [product.serialize for product in products]
+
+    def filter_by_category(self, category_id: int) -> List[dict]:
+        if not category_id:
+            abort(400, description="filter category value is required")
+
+        products = self.repository.filter_by_category(category_id=category_id)
+        return [product.serialize for product in products]
 
     def create_new_product(self, data: Dict[str, Any]) -> Dict | None:
         self.category_is_exists(data["category_id"])

@@ -16,9 +16,36 @@ class ProductListAPI(BaseRoutes):
     validator = ProductCreateValidator()
 
     @role_required("admin", "service_staff")
-    def get(self):  # List al product
-        users_data = self.service.list_items()
-        return self.format_plural_response(data=users_data)
+    def get(self):
+        search_value = request.args.get("name")
+        category_id = request.args.get("category")
+
+        if search_value and category_id:
+            name_search_products = self.service.search_by_product_name(
+                value=search_value
+            )
+            filter_category_products = self.service.filter_by_category(
+                category_id=category_id
+            )
+            id_set = {
+                product["id"] for product in name_search_products if "id" in product
+            }
+            products = [
+                product
+                for product in filter_category_products
+                if product.get("id") in id_set
+            ]
+
+        elif search_value:
+            products = self.service.search_by_product_name(value=search_value)
+
+        elif category_id:
+            products = self.service.filter_by_category(category_id=category_id)
+
+        else:
+            products = self.service.list_items()
+
+        return self.format_plural_response(data=products)
 
     @role_required("admin")
     def post(self):  # Post product
