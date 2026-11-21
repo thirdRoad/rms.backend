@@ -1,8 +1,10 @@
+from datetime import datetime, timezone
 from typing import Any
 
-from werkzeug.security import check_password_hash, generate_password_hash
+from sqlalchemy import select
 
 from flaskr.core.extensions import db
+from flaskr.core.security import hash_password, verify_password
 from flaskr.domains.role.models import Role
 from flaskr.domains.user.models import User
 from flaskr.domains.user.services import UserService
@@ -28,7 +30,7 @@ class TestUserListAPI(BaseTestCase):
 
         admin_user = User(
             username="testadmin",
-            password=generate_password_hash("adminpass"),
+            password=hash_password("adminpass"),
             display_name="Admin",
             email="admin@test.com",
             role_id=self.role_id,
@@ -93,7 +95,7 @@ class TestUserListAPI(BaseTestCase):
 
         user = db.session.get(User, res.json["data"]["id"])
         assert user.password != "asd123"
-        assert check_password_hash(user.password, "asd123")
+        assert verify_password(user.password, "asd123")
 
     def test_created_user_can_login(self):
         self.create_user()
@@ -146,7 +148,7 @@ class TestUserListAPI(BaseTestCase):
         assert res.status_code == 400
         assert res.json["message"] == {
             "username": ["Not a valid string."],
-            "email": ["Not a valid string."],
+            "email": ["Not a valid email address."],
         }
 
     def test_create_user_null_body_returns_400(self):
@@ -261,7 +263,7 @@ class TestUserListAPI(BaseTestCase):
         self.patch_user(created_user_id, {"password": "newpass1"})
 
         user = db.session.get(User, created_user_id)
-        assert check_password_hash(user.password, "newpass1")
+        assert verify_password(user.password, "newpass1")
 
         res = self.client.post(
             "/auth/login", json={"username": "denizbaba", "password": "newpass1"}
@@ -288,3 +290,171 @@ class TestUserListAPI(BaseTestCase):
         res = self.patch_user(999, {"display_name": "Samsun"})
 
         assert res.status_code == 404
+
+    # --- list: filtering & sorting ---
+
+    def seed_list_users(self) -> int:
+        # testadmin (admin) already exists; adds ali, ayse (staff), mehmet (admin)
+        staff = Role(name="staff")
+        db.session.add(staff)
+        db.session.commit()
+
+        admin = db.session.scalars(select(User).filter_by(username="testadmin")).one()
+        admin.created_at = datetime(2026, 10, 1, tzinfo=timezone.utc)
+
+        for username, display_name, role_id, created_at in [
+            ("ali", "Ali Veli", staff.id, datetime(2026, 11, 1, tzinfo=timezone.utc)),
+            ("ayse", "Ayse Can", staff.id, datetime(2026, 11, 10, tzinfo=timezone.utc)),
+            (
+                "mehmet",
+                "Mehmet Ali",
+                self.role_id,
+                datetime(2026, 11, 20, tzinfo=timezone.utc),
+            ),
+        ]:
+            db.session.add(
+                User(
+                    username=username,
+                    password=hash_password("secret1"),
+                    display_name=display_name,
+                    email=f"{username}@test.com",
+                    role_id=role_id,
+                    created_at=created_at,
+                )
+            )
+        db.session.commit()
+        return staff.id
+
+    def list_users(self, **params: Any):
+        return self.client.get(
+            "/users/", query_string=params, headers=self.get_auth_headers()
+        )
+
+    def list_usernames(self, **params: Any) -> list[str]:
+        res = self.list_users(**params)
+        assert res.status_code == 200, res.json
+        return [user["username"] for user in res.json["data"]]
+
+    def test_list_without_params_is_ordered_by_id(self):
+        self.seed_list_users()
+
+        assert self.list_usernames() == ["testadmin", "ali", "ayse", "mehmet"]
+
+    def test_filter_by_username_is_exact_match(self):
+        self.seed_list_users()
+
+        assert self.list_usernames(username="ali") == ["ali"]
+        assert self.list_usernames(username="al") == []
+
+    def test_filter_by_username_is_normalized(self):
+        self.seed_list_users()
+
+        assert self.list_usernames(username="  ALI ") == ["ali"]
+
+    def test_filter_by_display_name_is_case_insensitive_contains(self):
+        self.seed_list_users()
+
+        assert self.list_usernames(display_name="ali") == ["ali", "mehmet"]
+
+    def test_filter_by_display_name_escapes_wildcards(self):
+        self.seed_list_users()
+
+        assert self.list_usernames(display_name="%") == []
+
+    def test_filter_by_email_is_normalized(self):
+        self.seed_list_users()
+
+        assert self.list_usernames(email=" AYSE@test.com ") == ["ayse"]
+
+    def test_filter_by_role(self):
+        staff_id = self.seed_list_users()
+
+        assert self.list_usernames(role=staff_id) == ["ali", "ayse"]
+
+    def test_multiple_filters_are_combined_with_and(self):
+        self.seed_list_users()
+
+        assert self.list_usernames(role=self.role_id, display_name="ali") == ["mehmet"]
+
+    def test_empty_and_unknown_params_are_ignored(self):
+        self.seed_list_users()
+
+        assert len(self.list_usernames(username="", foo="bar")) == 4
+
+    def test_filter_with_invalid_type_returns_400(self):
+        res = self.list_users(role="abc")
+
+        assert res.status_code == 400
+        assert res.json["message"] == {"role": ["Not a valid integer."]}
+
+    def test_sort_by_username_ascending(self):
+        self.seed_list_users()
+
+        assert self.list_usernames(sort="username") == [
+            "ali",
+            "ayse",
+            "mehmet",
+            "testadmin",
+        ]
+
+    def test_sort_by_username_descending(self):
+        self.seed_list_users()
+
+        assert self.list_usernames(sort="-username") == [
+            "testadmin",
+            "mehmet",
+            "ayse",
+            "ali",
+        ]
+
+    def test_sort_and_filter_together(self):
+        staff_id = self.seed_list_users()
+
+        assert self.list_usernames(role=staff_id, sort="-username") == [
+            "ayse",
+            "ali",
+        ]
+
+    def test_sort_by_disallowed_field_returns_400(self):
+        res = self.list_users(sort="password")
+
+        assert res.status_code == 400
+        assert res.json["message"] == {
+            "sort": [
+                "Invalid sort field(s): password. "
+                "Allowed: created_at, display_name, email, username."
+            ]
+        }
+
+    def test_filter_by_created_from(self):
+        self.seed_list_users()
+
+        assert self.list_usernames(created_from="2026-11-10T00:00:00Z") == [
+            "ayse",
+            "mehmet",
+        ]
+
+    def test_filter_by_created_range(self):
+        self.seed_list_users()
+
+        result = self.list_usernames(
+            created_from="2026-11-01T00:00:00Z", created_to="2026-11-10T00:00:00Z"
+        )
+
+        assert result == ["ali"]  # created_to is exclusive
+
+    def test_filter_by_naive_datetime_returns_400(self):
+        res = self.list_users(created_from="2026-11-01T00:00:00")
+
+        assert res.status_code == 400
+        assert "created_from" in res.json["message"]
+
+    def test_sort_by_created_at_descending(self):
+        self.seed_list_users()
+
+        assert self.list_usernames(sort="-created_at") == [
+            "mehmet",
+            "ayse",
+            "ali",
+            "testadmin",
+        ]

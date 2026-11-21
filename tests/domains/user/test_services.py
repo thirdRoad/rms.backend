@@ -1,7 +1,7 @@
 import pytest
 from werkzeug.exceptions import NotFound
-from werkzeug.security import check_password_hash
 
+from flaskr.core.security import verify_password
 from flaskr.domains.role.models import Role
 from flaskr.domains.user.models import User
 from flaskr.domains.user.services import UserService
@@ -42,4 +42,4 @@ class TestUserService(BaseTestCase):
             assert test_response["username"] == "denizbaba"
 
             user = self.db.session.get(User, test_response["id"])
-            assert check_password_hash(user.password, "asd123")
+            assert verify_password(user.password, "asd123")

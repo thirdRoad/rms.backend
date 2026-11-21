@@ -1,6 +1,5 @@
-from werkzeug.security import generate_password_hash
-
 from flaskr.core.extensions import db
+from flaskr.core.security import hash_password
 from flaskr.domains.auth.models import TokenBlocklist
 from flaskr.domains.auth.services import AuthService
 from flaskr.domains.role.models import Role
@@ -22,14 +21,14 @@ class TestAuthAPI(BaseTestCase):
         users = [
             User(
                 username="testadmin",
-                password=generate_password_hash("adminpass"),
+                password=hash_password("adminpass"),
                 display_name="Admin",
                 email="admin@test.com",
                 role_id=admin_role.id,
             ),
             User(
                 username="testwaiter",
-                password=generate_password_hash("waiterpass"),
+                password=hash_password("waiterpass"),
                 display_name="Waiter",
                 email="waiter@test.com",
                 role_id=waiter_role.id,
