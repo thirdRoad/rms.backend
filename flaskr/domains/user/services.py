@@ -1,7 +1,6 @@
 from typing import Any, Dict
 
 from flask import abort
-from werkzeug.security import generate_password_hash
 
 from flaskr.core.base.services import BaseService
 from flaskr.domains.user.models import User
@@ -23,7 +22,6 @@ class UserService(BaseService):
         return response
 
     def create_new_user(self, data: Dict[str, Any]) -> Dict | None:
-        data["password"] = generate_password_hash(data["password"])
         return self.create_new_item(
             model_class=User,
             column_name="username",

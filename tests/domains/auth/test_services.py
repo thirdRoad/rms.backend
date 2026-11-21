@@ -1,8 +1,8 @@
 import pytest
 from flask_jwt_extended import decode_token, verify_jwt_in_request
 from werkzeug.exceptions import Unauthorized
-from werkzeug.security import generate_password_hash
 
+from flaskr.core.security import hash_password
 from flaskr.domains.auth.models import TokenBlocklist
 from flaskr.domains.auth.services import AuthService
 from flaskr.domains.role.models import Role
@@ -21,7 +21,7 @@ class TestAuthService(BaseTestCase):
 
         user = User(
             username="testadmin",
-            password=generate_password_hash("adminpass"),
+            password=hash_password("adminpass"),
             display_name="Admin",
             email="admin@test.com",
             role_id=role.id,
@@ -30,12 +30,9 @@ class TestAuthService(BaseTestCase):
         self.db.session.commit()
         self.user_id = user.id
 
-
     def test_verify_user_returns_tokens(self):
         with self.app.test_request_context():
-            result = self.domain.verify_user(
-                username="testadmin", password="adminpass"
-            )
+            result = self.domain.verify_user(username="testadmin", password="adminpass")
 
             assert "access_token" in result
             assert result["access_token"]
@@ -43,9 +40,7 @@ class TestAuthService(BaseTestCase):
 
     def test_verify_user_token_contains_identity_and_role(self):
         with self.app.test_request_context():
-            result = self.domain.verify_user(
-                username="testadmin", password="adminpass"
-            )
+            result = self.domain.verify_user(username="testadmin", password="adminpass")
 
             claims = decode_token(result["access_token"])
             assert claims["sub"] == str(self.user_id)
@@ -61,7 +56,6 @@ class TestAuthService(BaseTestCase):
 
     def test_verify_user_nonexistent_user_raises_401(self):
 
-
         with self.app.test_request_context():
             with pytest.raises(Unauthorized) as exc_info:
                 self.domain.verify_user(username="ghostuser", password="whatever1")
@@ -69,14 +63,12 @@ class TestAuthService(BaseTestCase):
             assert exc_info.value.code == 401
             assert "Invalid credentials" in exc_info.value.description
 
-
     def test_logout_adds_jti_to_blocklist(self):
         with self.app.test_request_context():
-            token = self.domain.verify_user(
-                username="testadmin", password="adminpass"
-            )["access_token"]
+            token = self.domain.verify_user(username="testadmin", password="adminpass")[
+                "access_token"
+            ]
             expected_jti = decode_token(token)["jti"]
-
 
         with self.app.test_request_context(
             headers={"Authorization": f"Bearer {token}"}

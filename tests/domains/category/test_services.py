@@ -16,7 +16,6 @@ class TestCategoryService(BaseTestCase):
         self.db.session.commit()
         return category.id
 
-
     def test_create_new_category_returns_serialized_data(self):
         with self.app.test_request_context():
             result = self.domain.create_new_category(data={"name": "Drinks"})
@@ -42,7 +41,6 @@ class TestCategoryService(BaseTestCase):
             assert exc_info.value.code == 409
             assert "already exists" in exc_info.value.description
 
-
     def test_get_by_id_returns_item(self):
         category_id = self.seed_category(name="Drinks")
 
@@ -59,7 +57,6 @@ class TestCategoryService(BaseTestCase):
 
             assert exc_info.value.code == 404
 
-
     def test_list_items_returns_all_serialized(self):
         self.seed_category(name="Drinks")
         self.seed_category(name="Desserts")
@@ -73,7 +70,6 @@ class TestCategoryService(BaseTestCase):
     def test_list_items_empty_db_returns_empty_list(self):
         with self.app.test_request_context():
             assert self.domain.list_items() == []
-
 
     def test_update_item_changes_and_returns_data(self):
         category_id = self.seed_category(name="Drinks")
@@ -89,7 +85,6 @@ class TestCategoryService(BaseTestCase):
         with self.app.test_request_context():
             with pytest.raises(NotFound):
                 self.domain.update_item(item_id=999, data={"name": "Beverages"})
-
 
     def test_delete_item_returns_true_and_removes(self):
         category_id = self.seed_category(name="Drinks")

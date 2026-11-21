@@ -1,6 +1,5 @@
-from werkzeug.security import generate_password_hash
-
 from flaskr.core.extensions import db
+from flaskr.core.security import hash_password
 from flaskr.domains.category.models import Category
 from flaskr.domains.product.models import Product
 from flaskr.domains.product.services import ProductService
@@ -24,21 +23,21 @@ class TestProductAPI(BaseTestCase):
         users = [
             User(
                 username="testadmin",
-                password=generate_password_hash("adminpass"),
+                password=hash_password("adminpass"),
                 display_name="Admin",
                 email="admin@test.com",
                 role_id=admin_role.id,
             ),
             User(
                 username="teststaff",
-                password=generate_password_hash("staffpass"),
+                password=hash_password("staffpass"),
                 display_name="Staff",
                 email="staff@test.com",
                 role_id=staff_role.id,
             ),
             User(
                 username="testkitchen",
-                password=generate_password_hash("kitchenpass"),
+                password=hash_password("kitchenpass"),
                 display_name="Kitchen",
                 email="kitchen@test.com",
                 role_id=kitchen_role.id,
