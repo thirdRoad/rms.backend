@@ -4,7 +4,12 @@ from flaskr.core.base.routes import BaseRoutes
 from flaskr.core.decorators import role_required
 from flaskr.domains.order.models import OrderStatus
 from flaskr.domains.order.services import OrderService
-from flaskr.domains.order.validators import OrderCreateValidator, OrderUpdateValidator
+from flaskr.domains.order.validators import (
+    OrderCreateValidator,
+    OrderFilterValidator,
+    OrderSortValidator,
+    OrderUpdateValidator,
+)
 
 from . import bp
 
@@ -12,10 +17,14 @@ from . import bp
 class OrderListAPI(BaseRoutes):
     service = OrderService()
     validator = OrderCreateValidator()
+    filter_validator = OrderFilterValidator()
+    sort_validator = OrderSortValidator()
 
     @role_required("admin", "service_staff", "kitchen_staff")
     def get(self):  # List all order id and created_at
-        order_data = self.service.list_items()
+        order_data = self.service.list_items(
+            filters=self.get_filters(), sort=self.get_sorting()
+        )
         return self.format_plural_response(data=order_data)
 
     @role_required("admin", "service_staff")
