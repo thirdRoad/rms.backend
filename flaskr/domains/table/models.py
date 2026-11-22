@@ -40,9 +40,7 @@ class Table(BaseModel):
     def serialize(self) -> Dict:
         return {
             "id": self.id,
-            "status": (
-                self.status.value if hasattr(self.status, "value") else self.status
-            ),
+            "status": self.status.value,
             "created_at": to_iso(self.created_at),
-            "last_updated": (to_iso(self.last_updated)),
+            "last_updated": to_iso(self.last_updated),
         }

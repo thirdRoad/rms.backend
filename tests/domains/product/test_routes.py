@@ -87,7 +87,6 @@ class TestProductAPI(BaseTestCase):
         payload = {
             "name": "Cheeseburger",
             "price": 12.5,
-            "stock": 20,
             "category_id": category_id,
         }
 
@@ -100,7 +99,7 @@ class TestProductAPI(BaseTestCase):
         assert res.status_code == 201
         assert res.json["data"]["name"] == "Cheeseburger"
         assert res.json["data"]["price"] == 12.5
-        assert res.json["data"]["stock"] == 20
+        assert res.json["data"]["stock"] is None
         assert "id" in res.json["data"]
         assert "created_at" in res.json["data"]
 
@@ -113,7 +112,6 @@ class TestProductAPI(BaseTestCase):
             json={
                 "name": "Cheeseburger",
                 "price": 15.0,
-                "stock": 10,
                 "category_id": category_id,
             },
             headers=self.get_auth_headers(),
@@ -128,7 +126,6 @@ class TestProductAPI(BaseTestCase):
             json={
                 "name": "Tost",
                 "price": 10.0,
-                "stock": 0,
                 "category_id": 999,
             },
             headers=self.get_auth_headers(),
@@ -136,6 +133,23 @@ class TestProductAPI(BaseTestCase):
 
         assert res.status_code == 404
         assert res.json["message"] == "Category not found"
+
+    def test_create_product_with_stock_returns_400(self):
+        category_id = self.create_category(name="Burgers")
+
+        res = self.client.post(
+            "/products/",
+            json={
+                "name": "Cheeseburger",
+                "price": 12.5,
+                "stock": 20,
+                "category_id": category_id,
+            },
+            headers=self.get_auth_headers(),
+        )
+
+        assert res.status_code == 400
+        assert res.json["message"] == {"stock": ["Unknown field."]}
 
     def test_create_product_missing_required_fields_returns_400(self):
         res = self.client.post(
@@ -150,7 +164,7 @@ class TestProductAPI(BaseTestCase):
     def test_create_product_without_token_returns_401(self):
         res = self.client.post(
             "/products/",
-            json={"name": "Unauthorized Product", "price": 10.0, "stock": 5},
+            json={"name": "Unauthorized Product", "price": 10.0},
         )
 
         assert res.status_code == 401
@@ -163,7 +177,6 @@ class TestProductAPI(BaseTestCase):
             json={
                 "name": "Cola",
                 "price": 5.0,
-                "stock": 50,
                 "category_id": category_id,
             },
             headers=self.get_auth_headers("teststaff", "staffpass"),
@@ -255,14 +268,13 @@ class TestProductAPI(BaseTestCase):
 
         res = self.client.patch(
             f"/products/{product_id}",
-            json={"name": "Pizza", "price": 14.0, "stock": 8},
+            json={"name": "Pizza", "price": 14.0},
             headers=self.get_auth_headers(),
         )
 
         assert res.status_code == 200
         assert res.json["data"]["name"] == "Pizza"
         assert res.json["data"]["price"] == 14.0
-        assert res.json["data"]["stock"] == 8
 
         get_res = self.client.get(
             f"/products/{product_id}",
