@@ -1,6 +1,5 @@
-from werkzeug.security import generate_password_hash
-
 from flaskr.core.extensions import db
+from flaskr.core.security import hash_password
 from flaskr.domains.role.models import Role
 from flaskr.domains.table.models import Table, TableStatus
 from flaskr.domains.table.services import TableService
@@ -23,28 +22,28 @@ class TestTableListAPI(BaseTestCase):
         users = [
             User(
                 username="testadmin",
-                password=generate_password_hash("adminpass"),
+                password=hash_password("adminpass"),
                 display_name="Admin",
                 email="admin@test.com",
                 role_id=admin_role.id,
             ),
             User(
                 username="testservice",
-                password=generate_password_hash("servicepass"),
+                password=hash_password("servicepass"),
                 display_name="Service",
                 email="service@test.com",
                 role_id=service_role.id,
             ),
             User(
                 username="testkitchen",
-                password=generate_password_hash("kitchenpass"),
+                password=hash_password("kitchenpass"),
                 display_name="Kitchen",
                 email="kitchen@test.com",
                 role_id=kitchen_role.id,
             ),
             User(
                 username="testwaiter",
-                password=generate_password_hash("waiterpass"),
+                password=hash_password("waiterpass"),
                 display_name="Waiter",
                 email="waiter@test.com",
                 role_id=waiter_role.id,

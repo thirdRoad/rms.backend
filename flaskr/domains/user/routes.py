@@ -3,7 +3,12 @@ from flask import request
 from flaskr.core.base.routes import BaseRoutes
 from flaskr.core.decorators import role_required
 from flaskr.domains.user.services import UserService
-from flaskr.domains.user.validators import UserCreateValidator, UserUpdateValidator
+from flaskr.domains.user.validators import (
+    UserCreateValidator,
+    UserFilterValidator,
+    UserSortValidator,
+    UserUpdateValidator,
+)
 
 from . import bp
 
@@ -11,10 +16,14 @@ from . import bp
 class UserListAPI(BaseRoutes):
     service = UserService()
     validator = UserCreateValidator()
+    filter_validator = UserFilterValidator()
+    sort_validator = UserSortValidator()
 
     @role_required("admin")
-    def get(self):  # Return all users
-        users_data = self.service.list_items()
+    def get(self):  # List users, filtered and sorted by query params
+        users_data = self.service.list_items(
+            filters=self.get_filters(), sort=self.get_sorting()
+        )
         return self.format_plural_response(data=users_data)
 
     @role_required("admin")
