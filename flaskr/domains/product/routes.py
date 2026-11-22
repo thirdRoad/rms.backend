@@ -5,6 +5,8 @@ from flaskr.core.decorators import role_required
 from flaskr.domains.product.services import ProductService
 from flaskr.domains.product.validators import (
     ProductCreateValidator,
+    ProductFilterValidator,
+    ProductSortValidator,
     ProductUpdateValidator,
 )
 
@@ -14,11 +16,15 @@ from . import bp
 class ProductListAPI(BaseRoutes):
     service = ProductService()
     validator = ProductCreateValidator()
+    filter_validator = ProductFilterValidator()
+    sort_validator = ProductSortValidator()
 
     @role_required("admin", "service_staff")
     def get(self):  # List al product
-        users_data = self.service.list_items()
-        return self.format_plural_response(data=users_data)
+        products_data = self.service.list_items(
+            filters=self.get_filters(), sort=self.get_sorting()
+        )
+        return self.format_plural_response(data=products_data)
 
     @role_required("admin")
     def post(self):  # Post product
