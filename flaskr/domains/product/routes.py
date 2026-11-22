@@ -20,7 +20,7 @@ class ProductListAPI(BaseRoutes):
     sort_validator = ProductSortValidator()
 
     @role_required("admin", "service_staff")
-    def get(self):  # List al product
+    def get(self):  # List products, filtered and sorted by query params
         products_data = self.service.list_items(
             filters=self.get_filters(), sort=self.get_sorting()
         )

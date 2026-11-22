@@ -14,11 +14,10 @@ from flaskr.core.base.validators import (
 class ProductValidator(BaseValidator):
     name = fields.Str(
         required=True,
-        validate=validate.Length(min=3, max=50),
+        validate=validate.Length(min=1, max=50),
         metadata={FieldOption.STRIP: True},
     )
     price = fields.Float(required=True, validate=validate.Range(min=0))
-    stock = fields.Int(required=True, validate=validate.Range(min=0))
     category_id = fields.Int(required=True, validate=validate.Range(min=1))
 
 
@@ -27,7 +26,7 @@ class ProductCreateValidator(ProductValidator):
 
 
 class ProductUpdateValidator(ProductValidator):
-    PARTIAL_FIELDS = {"name", "price", "stock", "category_id"}
+    PARTIAL_FIELDS = {"name", "price", "category_id"}
 
     @validates_schema
     def require_any_field(self, data: dict[str, Any], **kwargs) -> None:
@@ -52,7 +51,6 @@ class ProductFilterValidator(BaseFilterValidator):
         validate=validate.Range(min=0),
         metadata={FieldOption.COLUMN: "price", FieldOption.LOOKUP: Lookup.LTE},
     )
-    # ?created_from=2026-11-01T00:00:00Z&created_to=2026-11-22T00:00:00Z (UTC)
     created_from = fields.AwareDateTime(
         metadata={FieldOption.COLUMN: "created_at", FieldOption.LOOKUP: Lookup.GTE},
     )
@@ -62,4 +60,4 @@ class ProductFilterValidator(BaseFilterValidator):
 
 
 class ProductSortValidator(BaseSortValidator):
-    SORT_FIELDS = {"name", "price", "stock", "created_at"}
+    SORT_FIELDS = {"name", "price", "created_at"}
