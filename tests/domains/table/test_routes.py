@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from flaskr.core.extensions import db
 from flaskr.core.security import hash_password
 from flaskr.domains.role.models import Role
@@ -69,7 +71,7 @@ class TestTableListAPI(BaseTestCase):
         return table.id
 
     def test_create_table_returns_201(self):
-        res = self.client.post("/tables/", headers=self.get_auth_headers())
+        res = self.client.post("/tables/", json={}, headers=self.get_auth_headers())
 
         assert res.status_code == 201
         assert res.json["data"]["status"] == "available"
@@ -78,10 +80,28 @@ class TestTableListAPI(BaseTestCase):
         assert res.json["data"]["last_updated"] is None
 
     def test_create_table_persists_to_db(self):
-        res = self.client.post("/tables/", headers=self.get_auth_headers())
+        res = self.client.post("/tables/", json={}, headers=self.get_auth_headers())
         created_table_id = res.json["data"]["id"]
 
         assert db.session.get(Table, created_table_id) is not None
+
+    def test_create_table_with_status_returns_201(self):
+        res = self.client.post(
+            "/tables/", json={"status": "reserved"}, headers=self.get_auth_headers()
+        )
+
+        assert res.status_code == 201
+        assert res.json["data"]["status"] == "reserved"
+
+    def test_create_table_invalid_status_returns_400(self):
+        res = self.client.post(
+            "/tables/", json={"status": "flying"}, headers=self.get_auth_headers()
+        )
+
+        assert res.status_code == 400
+        assert res.json["message"] == {
+            "status": ["Must be one of: available, reserved, occupied."]
+        }
 
     def test_create_table_without_token_returns_401(self):
         res = self.client.post("/tables/")
@@ -137,6 +157,72 @@ class TestTableListAPI(BaseTestCase):
 
         assert res.status_code == 401
 
+    def seed_list_tables(self) -> None:
+        tables = [
+            Table(
+                status=TableStatus.AVAILABLE,
+                created_at=datetime(2026, 11, 1, tzinfo=timezone.utc),
+            ),
+            Table(
+                status=TableStatus.OCCUPIED,
+                created_at=datetime(2026, 11, 10, tzinfo=timezone.utc),
+            ),
+            Table(
+                status=TableStatus.RESERVED,
+                created_at=datetime(2026, 11, 20, tzinfo=timezone.utc),
+            ),
+        ]
+        db.session.add_all(tables)
+        db.session.commit()
+
+    def test_filter_by_status(self):
+        self.seed_list_tables()
+
+        res = self.client.get(
+            "/tables/?status=occupied", headers=self.get_auth_headers()
+        )
+
+        assert res.status_code == 200
+        assert [item["status"] for item in res.json["data"]] == ["occupied"]
+
+    def test_filter_by_invalid_status_returns_400(self):
+        res = self.client.get("/tables/?status=flying", headers=self.get_auth_headers())
+
+        assert res.status_code == 400
+        assert res.json["message"] == {
+            "status": ["Must be one of: available, reserved, occupied."]
+        }
+
+    def test_filter_by_created_range(self):
+        self.seed_list_tables()
+
+        res = self.client.get(
+            "/tables/?created_from=2026-11-05T00:00:00Z&created_to=2026-11-20T00:00:00Z",
+            headers=self.get_auth_headers(),
+        )
+
+        assert res.status_code == 200
+        assert [item["status"] for item in res.json["data"]] == ["occupied"]
+
+    def test_sort_by_created_at_desc(self):
+        self.seed_list_tables()
+
+        res = self.client.get(
+            "/tables/?sort=-created_at", headers=self.get_auth_headers()
+        )
+
+        assert res.status_code == 200
+        assert [item["status"] for item in res.json["data"]] == [
+            "reserved",
+            "occupied",
+            "available",
+        ]
+
+    def test_sort_by_invalid_field_returns_400(self):
+        res = self.client.get("/tables/?sort=id", headers=self.get_auth_headers())
+
+        assert res.status_code == 400
+
     def test_get_specified_table(self):
         table_id = self.create_table(status=TableStatus.RESERVED)
 
@@ -162,7 +248,7 @@ class TestTableListAPI(BaseTestCase):
 
         assert res.status_code == 403
 
-    def test_patch_table(self):
+    def test_patch_table_status_in_body_returns_400(self):
         table_id = self.create_table()
 
         res = self.client.patch(
@@ -171,40 +257,10 @@ class TestTableListAPI(BaseTestCase):
             headers=self.get_auth_headers(),
         )
 
-        assert res.status_code == 200
-        assert res.json["data"]["id"] == table_id
-        assert res.json["data"]["status"] == "occupied"
-        assert res.json["data"]["last_updated"] is not None
-
-    def test_patch_table_as_service_staff_returns_200(self):
-        table_id = self.create_table()
-
-        res = self.client.patch(
-            f"/tables/{table_id}",
-            json={"status": "reserved"},
-            headers=self.get_auth_headers("testservice", "servicepass"),
-        )
-
-        assert res.status_code == 200
-        assert res.json["data"]["status"] == "reserved"
-
-    def test_patch_table_invalid_status_returns_400(self):
-        table_id = self.create_table()
-
-        res = self.client.patch(
-            f"/tables/{table_id}",
-            json={"status": "flying"},
-            headers=self.get_auth_headers(),
-        )
-
         assert res.status_code == 400
-        assert res.json["error"] == "Validation Error"
-        assert res.json["message"] == {
-            "status": ["Must be one of: available, reserved, occupied."]
-        }
-        assert res.json["code"] == 400
+        assert res.json["message"] == {"status": ["Unknown field."]}
 
-    def test_patch_table_missing_status_returns_400(self):
+    def test_patch_table_empty_body_returns_400(self):
         table_id = self.create_table()
 
         res = self.client.patch(
@@ -214,23 +270,16 @@ class TestTableListAPI(BaseTestCase):
         )
 
         assert res.status_code == 400
-        assert res.json["message"] == {"status": ["Missing data for required field."]}
-
-    def test_patch_nonexistent_table_returns_404(self):
-        res = self.client.patch(
-            "/tables/55",
-            json={"status": "occupied"},
-            headers=self.get_auth_headers(),
-        )
-
-        assert res.status_code == 404
+        assert res.json["message"] == {
+            "_schema": ["At least one field must be provided."]
+        }
 
     def test_patch_table_as_kitchen_staff_returns_403(self):
         table_id = self.create_table()
 
         res = self.client.patch(
             f"/tables/{table_id}",
-            json={"status": "occupied"},
+            json={},
             headers=self.get_auth_headers("testkitchen", "kitchenpass"),
         )
 
@@ -239,7 +288,62 @@ class TestTableListAPI(BaseTestCase):
     def test_patch_table_without_token_returns_401(self):
         table_id = self.create_table()
 
-        res = self.client.patch(f"/tables/{table_id}", json={"status": "occupied"})
+        res = self.client.patch(f"/tables/{table_id}", json={})
+
+        assert res.status_code == 401
+
+    def test_set_table_occupied(self):
+        table_id = self.create_table()
+
+        res = self.client.post(
+            f"/tables/{table_id}/occupied", headers=self.get_auth_headers()
+        )
+
+        assert res.status_code == 200
+        assert res.json["data"]["id"] == table_id
+        assert res.json["data"]["status"] == "occupied"
+        assert res.json["data"]["last_updated"] is not None
+
+    def test_set_table_reserved_as_service_staff(self):
+        table_id = self.create_table()
+
+        res = self.client.post(
+            f"/tables/{table_id}/reserved",
+            headers=self.get_auth_headers("testservice", "servicepass"),
+        )
+
+        assert res.status_code == 200
+        assert res.json["data"]["status"] == "reserved"
+
+    def test_set_table_available(self):
+        table_id = self.create_table(status=TableStatus.OCCUPIED)
+
+        res = self.client.post(
+            f"/tables/{table_id}/available", headers=self.get_auth_headers()
+        )
+
+        assert res.status_code == 200
+        assert res.json["data"]["status"] == "available"
+
+    def test_set_status_nonexistent_table_returns_404(self):
+        res = self.client.post("/tables/55/occupied", headers=self.get_auth_headers())
+
+        assert res.status_code == 404
+
+    def test_set_status_as_kitchen_staff_returns_403(self):
+        table_id = self.create_table()
+
+        res = self.client.post(
+            f"/tables/{table_id}/occupied",
+            headers=self.get_auth_headers("testkitchen", "kitchenpass"),
+        )
+
+        assert res.status_code == 403
+
+    def test_set_status_without_token_returns_401(self):
+        table_id = self.create_table()
+
+        res = self.client.post(f"/tables/{table_id}/occupied")
 
         assert res.status_code == 401
 

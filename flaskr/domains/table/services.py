@@ -1,9 +1,7 @@
-from typing import Dict
-
-from typing_extensions import override
+from typing import Any, Dict
 
 from flaskr.core.base.services import BaseService
-from flaskr.domains.table.models import Table, TableStatus
+from flaskr.domains.table.models import Table
 from flaskr.domains.table.repositories import TableRepository
 
 
@@ -11,13 +9,5 @@ class TableService(BaseService):
     repository: TableRepository
     repository = TableRepository()
 
-    @override
-    def update_item(self, item_id: int, data: TableStatus) -> Dict | None:
-        self.get_by_id(item_id=item_id)
-        response = self.repository.update(item_id=item_id, data=data)
-        if response:
-            return self.get_by_id(item_id=item_id)
-
-    def create_new_table(self):
-        new_table = Table()
-        return self.repository.add(new_table)
+    def create_new_table(self, data: Dict[str, Any]) -> Table:
+        return self.repository.add(Table(**data))
