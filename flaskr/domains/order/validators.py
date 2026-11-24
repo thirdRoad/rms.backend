@@ -39,13 +39,11 @@ class OrderUpdateValidator(BaseValidator):
 
 class OrderFilterValidator(BaseFilterValidator):
     status = fields.Enum(OrderStatus, by_value=True)  # ?status=preparation
-    user = fields.Int(
+    user_id = fields.Int(
         validate=validate.Range(min=1),
-        metadata={FieldOption.COLUMN: "user_id"},
     )
-    table = fields.Int(
+    table_id = fields.Int(
         validate=validate.Range(min=1),
-        metadata={FieldOption.COLUMN: "table_id"},
     )
     # ?created_from=2026-11-01T00:00:00Z&created_to=2026-11-22T00:00:00Z (UTC)
     created_from = fields.AwareDateTime(
