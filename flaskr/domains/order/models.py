@@ -51,4 +51,17 @@ class Order(BaseModel):
             "id": self.id,
             "status": self.status.value if self.status else None,
             "created_at": to_iso(self.created_at),
+            "table": {
+                "id": self.table_id,
+            },
+            "user": {"id": self.user_id, "username": self.user.username},
+            "items": [item.serialize for item in self.items],
+        }
+
+    @property
+    def serialize_detail(self) -> Dict:
+        return {
+            **self.serialize,
+            "user": self.user.serialize,
+            "table": self.table.serialize,
         }

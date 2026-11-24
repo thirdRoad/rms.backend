@@ -127,10 +127,7 @@ class TestOrdersService(BaseTestCase):
         with self.app.test_request_context():
             assert self.domain.delete_order_products(item_id=order_id) is True
 
-            with pytest.raises(NotFound) as exc_info:
-                self.domain.get_order_items(order_id)
-
-            assert exc_info.value.description == "Order has no items"
+            assert self.domain.get_order_items(order_id) == []
 
     def test_delete_order_products_nonexistent_item_raises_404(self):
         with self.app.test_request_context():

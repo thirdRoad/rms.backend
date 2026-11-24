@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 from flask import abort
 
 from flaskr.core.base.services import BaseService
-from flaskr.core.utils import to_iso
+from flaskr.core.errors import not_found
 from flaskr.domains.order.models import OrderStatus
 from flaskr.domains.order.repositories import OrderRepository
 from flaskr.domains.order_item.repositories import OrderItemRepository
@@ -15,15 +15,14 @@ from flaskr.domains.user.repositories import UserRepository
 class OrderService(BaseService):
     repository: OrderRepository
     repository = OrderRepository()
+    domain = "Order"
     order_item_repo = OrderItemRepository()
     product_repo = ProductRepository()
     table_repo = TableRepository()
     user_repo = UserRepository()
 
     def update_order_status(self, order_id: int, status: str) -> Dict[str, Any]:
-        order = self.repository.get_by_id(order_id)
-        if order is None:
-            abort(404, description="Order not found")
+        order = self.get_or_404(order_id)
 
         new_status = OrderStatus(status)
         if order.status == new_status:
@@ -31,22 +30,6 @@ class OrderService(BaseService):
 
         self.repository.update(item_id=order_id, data={"status": new_status})
         return self.get_by_id(item_id=order_id)
-
-    def get_by_id(self, item_id: int) -> Dict | None:
-        order = self.repository.get_by_id(item_id=item_id)
-
-        if order is None:
-            abort(404, description="Order not found")
-
-        response = order.serialize
-        response["user"] = {
-            "id": order.user.id,
-            "username": order.user.username,
-            "email": order.user.email,
-            "created_at": to_iso(order.user.created_at),
-            "display_name": order.user.display_name,
-        }
-        return response
 
     def products_is_exists(self, items: List[Dict[str, Any]]) -> bool:
         product_ids = [item["product_id"] for item in items]
@@ -59,30 +42,21 @@ class OrderService(BaseService):
             pid for pid in product_ids if self.product_repo.get_by_id(pid) is None
         ]
         if missing:
-            abort(404, description=f"Product not found: {missing}")
+            not_found("Product", missing)
         return True
 
     def get_order_items(self, order_id: int) -> List[Dict[str, Any]]:
-        if self.repository.get_by_id(order_id) is None:
-            abort(404, description="Order not found")
-
+        self.get_or_404(order_id)
         items = self.order_item_repo.get_by_order_id(order_id)
-        if not items:
-            abort(404, description="Order has no items")
-
-        return [item.serialize for item in items]
+        return [item.serialize for item in items]  # empty order -> []
 
     def create_new_order(self, data: Dict[str, Any]) -> Dict[str, Any]:
 
-        user = self.user_repo.get_by_id(data["user_id"])
+        if self.user_repo.get_by_id(data["user_id"]) is None:
+            not_found("User")
 
-        if user is None:
-            abort(404, description="User not found")
-
-        table = self.table_repo.get_by_id(data["table_id"])
-
-        if table is None:
-            abort(404, description="Table not found")
+        if self.table_repo.get_by_id(data["table_id"]) is None:
+            not_found("Table")
 
         self.products_is_exists(data["items"])
 
@@ -93,10 +67,7 @@ class OrderService(BaseService):
     def update_order_items(
         self, order_id: int, items: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        order = self.repository.get_by_id(order_id)
-        if order is None:
-            abort(404, description="Order not found")
-
+        self.get_or_404(order_id)
         self.products_is_exists(items)
 
         self.repository.replace_order_items(order_id=order_id, items=items)
@@ -104,7 +75,5 @@ class OrderService(BaseService):
 
     # delete order details fonks
     def delete_order_products(self, item_id: int) -> bool:
-        order = self.repository.get_by_id(item_id)
-        if order is None:
-            abort(404, description="Order not found")
+        self.get_or_404(item_id)
         return self.repository.delete_order_products(order_id=item_id)

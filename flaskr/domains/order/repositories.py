@@ -1,6 +1,8 @@
 from typing import Any, Dict, List
 
+from sqlalchemy import Select
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import selectinload
 from typing_extensions import override
 
 from flaskr.core.base.repositories import BaseRepository
@@ -15,6 +17,20 @@ class OrderRepository(BaseRepository[Order]):
     model = Order
     product_repo = ProductRepository()
     order_item_repo = OrderItemRepository()
+
+    @override
+    def build_query(
+        self, filters: None | Dict[str, Any] = None, sort: None | List[str] = None
+    ) -> Select:
+        # eager-load what Order.serialize touches, avoiding N+1 on list
+        return (
+            super()
+            .build_query(filters, sort)
+            .options(
+                selectinload(Order.user),
+                selectinload(Order.items).selectinload(OrderItem.product),
+            )
+        )
 
     @override
     def add(self, data: Dict[str, Any]) -> Order:
