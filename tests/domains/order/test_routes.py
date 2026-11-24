@@ -360,14 +360,23 @@ class TestOrderAPI(BaseTestCase):
             f"/orders/{order_id}/items",
             headers=self.get_auth_headers(),
         )
-        assert items_res.status_code == 404
-        assert items_res.json["message"] == "Order has no items"
+        assert items_res.status_code == 200
+        assert items_res.json["data"] == []
 
         order_res = self.client.get(
             f"/orders/{order_id}",
             headers=self.get_auth_headers(),
         )
         assert order_res.status_code == 200
+
+    def test_delete_items_of_empty_order_returns_204(self):
+        order_id = self.create_order()["order_id"]
+        headers = self.get_auth_headers()
+
+        self.client.delete(f"/orders/{order_id}/items", headers=headers)
+        res = self.client.delete(f"/orders/{order_id}/items", headers=headers)
+
+        assert res.status_code == 204
 
     def test_delete_order_items_as_service_staff_returns_204(self):
         order_info = self.create_order()

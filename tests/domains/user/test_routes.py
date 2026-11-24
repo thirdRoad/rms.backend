@@ -206,7 +206,7 @@ class TestUserListAPI(BaseTestCase):
         res = self.client.get("/users/999", headers=self.get_auth_headers())
 
         assert res.status_code == 404
-        assert res.json["message"] == "There is no user"
+        assert res.json["message"] == "User not found"
 
     def test_delete_user(self):
         user_res = self.client.get("/users/", headers=self.get_auth_headers()).json[

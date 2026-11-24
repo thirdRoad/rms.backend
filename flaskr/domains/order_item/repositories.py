@@ -1,6 +1,5 @@
 from typing import List
 
-from flask import abort
 from sqlalchemy import delete, select
 
 from flaskr.core.base.repositories import BaseRepository
@@ -36,12 +35,7 @@ class OrderItemRepository(BaseRepository[OrderItem]):
         return False
 
     def delete_all_by_order_id(self, order_id: int) -> bool:
-        exists = (
-            db.session.query(OrderItem).filter(OrderItem.order_id == order_id).first()
-        )
-        if not exists:
-            abort(404, description="Order items for this order not found")
-
+        # idempotent: an order without items is already in the desired state
         stmt = delete(OrderItem).where(OrderItem.order_id == order_id)
         db.session.execute(stmt)
         return True

@@ -21,7 +21,7 @@ class OrderListAPI(BaseRoutes):
     sort_validator = OrderSortValidator()
 
     @role_required("admin", "service_staff", "kitchen_staff")
-    def get(self): 
+    def get(self):
         order_data = self.service.list_items(
             filters=self.get_filters(), sort=self.get_sorting()
         )

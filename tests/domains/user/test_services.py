@@ -19,7 +19,7 @@ class TestUserService(BaseTestCase):
                 self.domain.get_by_id(55)
 
             assert exc_info.value.code == 404
-            assert "There is no user" in exc_info.value.description
+            assert "User not found" in exc_info.value.description
 
     def test_create_new_user(self):
         role = Role(name="admin")

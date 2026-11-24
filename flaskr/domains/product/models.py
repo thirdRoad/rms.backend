@@ -37,3 +37,10 @@ class Product(BaseModel):
             "price": self.price,
             "stock": self.stock,
         }
+
+    @property
+    def serialize_detail(self) -> Dict:
+        return {
+            **self.serialize,
+            "category": {"id": self.category.id, "name": self.category.name},
+        }

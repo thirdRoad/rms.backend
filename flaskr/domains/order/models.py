@@ -57,3 +57,11 @@ class Order(BaseModel):
             "user": {"id": self.user_id, "username": self.user.username},
             "items": [item.serialize for item in self.items],
         }
+
+    @property
+    def serialize_detail(self) -> Dict:
+        return {
+            **self.serialize,
+            "user": self.user.serialize,
+            "table": self.table.serialize,
+        }

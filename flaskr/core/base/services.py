@@ -2,20 +2,23 @@ from typing import Any, Dict, Generic, List, Type, TypeVar
 
 from flask import abort
 
+from flaskr.core.errors import not_found
+
 T = TypeVar("T")
 
 
 class BaseService(Generic[T]):
     repository: Type[T]
+    domain: None | str = None  # e.g. "Order" -> "Order not found"
+
+    def get_or_404(self, item_id: int) -> Any:
+        item = self.repository.get_by_id(item_id=item_id)
+        if item is None:
+            not_found(self.domain)
+        return item
 
     def get_by_id(self, item_id: int) -> Any | None:
-        item = self.repository.get_by_id(item_id=item_id)
-
-        if item is None:
-            abort(404, description="There is no item")
-
-        response = item.serialize
-        return response
+        return self.get_or_404(item_id).serialize_detail
 
     def list_items(
         self, filters: None | Dict[str, Any] = None, sort: None | List[str] = None

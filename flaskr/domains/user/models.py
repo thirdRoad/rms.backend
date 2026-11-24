@@ -38,3 +38,7 @@ class User(BaseModel):
             "email": self.email,
             "created_at": to_iso(self.created_at),
         }
+
+    @property
+    def serialize_detail(self) -> Dict:
+        return {**self.serialize, "role": self.role.serialize}
