@@ -57,4 +57,4 @@ class OrderFilterValidator(BaseFilterValidator):
 
 
 class OrderSortValidator(BaseSortValidator):
-    SORT_FIELDS = {"status", "created_at"}
+    SORT_FIELDS = {"status", "created_at", "user_id", "table_id"}
