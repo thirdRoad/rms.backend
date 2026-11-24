@@ -17,8 +17,10 @@ class BaseService(Generic[T]):
         response = item.serialize
         return response
 
-    def list_items(self) -> List:
-        items = self.repository.get_all()
+    def list_items(
+        self, filters: None | Dict[str, Any] = None, sort: None | List[str] = None
+    ) -> List:
+        items = self.repository.get_all(filters=filters, sort=sort)
         return [item.serialize for item in items]
 
     def create_new_item(

@@ -18,7 +18,7 @@ class TestTableService(BaseTestCase):
 
     def test_create_new_table(self):
         with self.app.test_request_context():
-            new_table = self.domain.create_new_table()
+            new_table = self.domain.create_new_table(data={})
 
             assert isinstance(new_table, Table)
             assert new_table.id == 1
@@ -27,16 +27,24 @@ class TestTableService(BaseTestCase):
 
     def test_create_new_table_persists_to_db(self):
         with self.app.test_request_context():
-            new_table = self.domain.create_new_table()
+            new_table = self.domain.create_new_table(data={})
 
             assert self.db.session.get(Table, new_table.id) is not None
+
+    def test_create_new_table_with_status(self):
+        with self.app.test_request_context():
+            new_table = self.domain.create_new_table(
+                data={"status": TableStatus.RESERVED}
+            )
+
+            assert new_table.status == TableStatus.RESERVED
 
     def test_update_item_changes_status(self):
         table_id = self.seed_table()
 
         with self.app.test_request_context():
             test_response = self.domain.update_item(
-                item_id=table_id, data=TableStatus.OCCUPIED
+                item_id=table_id, data={"status": TableStatus.OCCUPIED}
             )
 
             assert test_response["id"] == table_id
@@ -46,7 +54,9 @@ class TestTableService(BaseTestCase):
     def test_update_item_not_found(self):
         with self.app.test_request_context():
             with pytest.raises(NotFound) as exc_info:
-                self.domain.update_item(item_id=55, data=TableStatus.RESERVED)
+                self.domain.update_item(
+                    item_id=55, data={"status": TableStatus.RESERVED}
+                )
 
             assert exc_info.value.code == 404
             assert "There is no item" in exc_info.value.description

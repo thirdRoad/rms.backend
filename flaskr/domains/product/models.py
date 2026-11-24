@@ -21,7 +21,7 @@ class Product(BaseModel):
         DateTime(timezone=True), default=utc_now
     )
     price: Mapped[float] = mapped_column(Float, default=0)
-    stock: Mapped[int] = mapped_column(Integer, default=0)
+    stock: Mapped[int | None] = mapped_column(Integer, default=None, nullable=True)
 
     category_id: Mapped[int] = mapped_foreign_key("category.id")
     category: Mapped["Category"] = relationship(back_populates="products")

@@ -1,6 +1,5 @@
-from werkzeug.security import generate_password_hash
-
 from flaskr.core.extensions import db
+from flaskr.core.security import hash_password
 from flaskr.domains.role.models import Role
 from flaskr.domains.role.services import RoleService
 from flaskr.domains.user.models import User
@@ -21,14 +20,14 @@ class TestRoleListAPI(BaseTestCase):
         users = [
             User(
                 username="testadmin",
-                password=generate_password_hash("adminpass"),
+                password=hash_password("adminpass"),
                 display_name="Admin",
                 email="admin@test.com",
                 role_id=admin_role.id,
             ),
             User(
                 username="testservice",
-                password=generate_password_hash("servicepass"),
+                password=hash_password("servicepass"),
                 display_name="Service",
                 email="service@test.com",
                 role_id=service_role.id,

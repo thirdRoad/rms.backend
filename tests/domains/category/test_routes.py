@@ -1,6 +1,5 @@
-from werkzeug.security import generate_password_hash
-
 from flaskr.core.extensions import db
+from flaskr.core.security import hash_password
 from flaskr.domains.category.models import Category
 from flaskr.domains.category.services import CategoryService
 from flaskr.domains.role.models import Role
@@ -22,21 +21,21 @@ class TestCategoryAPI(BaseTestCase):
         users = [
             User(
                 username="testadmin",
-                password=generate_password_hash("adminpass"),
+                password=hash_password("adminpass"),
                 display_name="Admin",
                 email="admin@test.com",
                 role_id=admin_role.id,
             ),
             User(
                 username="teststaff",
-                password=generate_password_hash("staffpass"),
+                password=hash_password("staffpass"),
                 display_name="Staff",
                 email="staff@test.com",
                 role_id=staff_role.id,
             ),
             User(
                 username="testkitchen",
-                password=generate_password_hash("kitchenpass"),
+                password=hash_password("kitchenpass"),
                 display_name="Kitchen",
                 email="kitchen@test.com",
                 role_id=kitchen_role.id,
@@ -45,7 +44,9 @@ class TestCategoryAPI(BaseTestCase):
         db.session.add_all(users)
         db.session.commit()
 
-    def get_auth_headers(self, username: str = "testadmin", password: str = "adminpass") -> dict:
+    def get_auth_headers(
+        self, username: str = "testadmin", password: str = "adminpass"
+    ) -> dict:
         res = self.client.post(
             "/auth/login",
             json={"username": username, "password": password},
@@ -58,7 +59,6 @@ class TestCategoryAPI(BaseTestCase):
         db.session.add(category)
         db.session.commit()
         return category.id
-
 
     def test_create_category_returns_201(self):
         res = self.client.post(
@@ -120,7 +120,6 @@ class TestCategoryAPI(BaseTestCase):
 
         assert res.status_code == 403
 
-
     def test_list_categories_returns_count_and_data(self):
         self.create_category(name="Drinks")
         self.create_category(name="Desserts")
@@ -150,7 +149,6 @@ class TestCategoryAPI(BaseTestCase):
 
         assert res.status_code == 403
 
-
     def test_get_category_by_id_returns_200(self):
         category_id = self.create_category(name="Drinks")
 
@@ -168,7 +166,6 @@ class TestCategoryAPI(BaseTestCase):
 
         assert res.status_code == 404
 
-
     def test_update_category_returns_updated_data(self):
         category_id = self.create_category(name="Drinks")
 
@@ -180,7 +177,6 @@ class TestCategoryAPI(BaseTestCase):
 
         assert res.status_code == 200
         assert res.json["data"]["name"] == "Beverages"
-
 
         res = self.client.get(
             f"/categories/{category_id}/",
@@ -208,7 +204,6 @@ class TestCategoryAPI(BaseTestCase):
 
         assert res.status_code == 403
 
-
     def test_delete_category_returns_204_and_removes_item(self):
         category_id = self.create_category(name="Drinks")
 
@@ -218,7 +213,6 @@ class TestCategoryAPI(BaseTestCase):
         )
 
         assert res.status_code == 204
-
 
         res = self.client.get(
             f"/categories/{category_id}/",
